@@ -11,19 +11,41 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.main import app
 from app.config import settings
 
+def _looks_like_our_backend(pid: int) -> bool:
+    """Guard against PID reuse: a live PID in the lockfile may belong to an
+    unrelated process (common after a machine restart), which would otherwise
+    permanently block startup. Only treat it as our backend if the command
+    line matches."""
+    if os.name != "posix":
+        return True  # No /proc on Windows; keep the conservative behavior.
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            cmdline = f.read().replace(b"\x00", b" ").decode("utf-8", "replace")
+    except OSError:
+        return False  # vanished between the kill(0) check and now → stale
+    return ("pa-backend" in cmdline) or ("entry.py" in cmdline)
+
 def check_pid_lock():
-    """Prevents multiple backend instances from running."""
+    """Prevents multiple backend instances from running (PID-reuse safe)."""
     pid_file = settings.PID_FILE
     if pid_file.exists():
         try:
             old_pid = int(pid_file.read_text().strip())
             # Check if the process is actually running
             os.kill(old_pid, 0)
-            print(f"ERROR: Backend already running with PID {old_pid}", file=sys.stderr)
-            sys.exit(1)
+            if _looks_like_our_backend(old_pid):
+                print(f"ERROR: Backend already running with PID {old_pid}", file=sys.stderr)
+                sys.exit(1)
+            # Live PID but not our backend → recycled after a restart; reclaim.
+            logger.warning(
+                "Stale PID lock: PID %s is alive but is not Prompt Architect. Reclaiming.",
+                old_pid,
+            )
         except (ValueError, OSError, ProcessLookupError):
             # PID file is stale, safe to overwrite
-            pid_file.unlink(missing_ok=True)
+            pass
+
+        pid_file.unlink(missing_ok=True)
 
     pid_file.write_text(str(os.getpid()))
 
