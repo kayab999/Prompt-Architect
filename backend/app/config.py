@@ -80,7 +80,7 @@ SYSTEM_KEY = get_or_create_system_key()
 
 # --- 3. Ollama Connectivity Check ---
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "300"))
 
 
 def check_ollama_status(
@@ -111,7 +111,7 @@ class Settings:
     SYSTEM_KEY: str = SYSTEM_KEY
     ENV: str = os.getenv("PA_ENV", "production")
     OLLAMA_ONLINE: bool = OLLAMA_ONLINE
-    OLLAMA_TIMEOUT: float = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+    OLLAMA_TIMEOUT: float = float(os.getenv("OLLAMA_TIMEOUT", "300"))
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     # Reserved flag: MicroVM tribunal is experimental and NOT wired into /generate.
     # Setting this only surfaces a clear log warning; it does not enable Firecracker.

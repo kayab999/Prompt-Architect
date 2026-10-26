@@ -24,8 +24,10 @@
 - [x] M3: Groq `GROQ_MODELS` refreshed to current production (5 retired IDs removed); prefix detection extended
 - [x] M4: governance rules wired into `run_refinement`; regex rules enforced (CRITICAL blocks + iterate, others advisory); R100 downgraded to HIGH to avoid non-convergence
 - [x] PID-lock regression fixed (`_looks_like_our_backend`) — desktop launch after machine restart works again; 5 regression tests
-- [ ] Live smokes on profile-sensitive models (`deepseek-r1-distill-qwen-7b-q4_k_m`, `qwen2.5-coder:7b`, `smollm2-1.7b`) + regression `qwen2.5:0.5b`
-- [ ] Sidecar + deb rebuilt with M1–M4 + PID fix
+- [x] Live smokes (2026-10-26): `qwen2.5:0.5b`, `smollm2-1.7b`, `deepseek-r1:1.5b` (R1-family rep — the 7B distill is unloadable on this 6 GB-RAM box), `qwen2.5-coder:3b` — all 200/success/signed/1 iteration
+- [x] Sidecar rebuilt + binary smoke passed with production defaults (2026-10-26: qwen2.5-coder:3b → 200/success/signed/1 iteration; `OLLAMA_TIMEOUT` default raised 120s→300s for CPU inference)
+- [x] deb rebuilt with audit fixes (`Prompt Architect_1.0.2-rc.1_amd64.deb`, 2026-10-26)
+- [ ] UI click-through re-run on rebuilt deb — protocol below
 
 ## Functional (manual / smoke)
 
