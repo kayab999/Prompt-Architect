@@ -2,9 +2,19 @@
 
 ## Automated gates
 
-- [x] `./ci/gates.sh` exits 0 (re-verified 2026-10-26)
-- [x] `pytest backend/tests` all pass (37) (re-verified 2026-10-26)
+- [x] `./ci/gates.sh` exits 0 (re-verified 2026-10-26, after model enablement M1–M4)
+- [x] `pytest backend/tests` all pass (**53**: 37 original + 5 PID-lock + 11 model profiles) (2026-10-26)
 - [x] `ci/pack-test.sh` green end-to-end: PyInstaller build → launch → `PA_PORT` discovery → `/health` (2026-10-26; script repaired: root spec path, onefile exe path, dynamic-port discovery)
+
+## Model enablement (M1–M4, 2026-10-26)
+
+- [x] M1: per-model behavior layer — `ModelProfileService` + profile-aware pipeline (system role vs. embedded-user-message for DeepSeek-R1)
+- [x] M2: `model_profiles.yml` researched from official cards — all 15 installed models + 4 legacy externals covered; community FTs marked `experimental: true`
+- [x] M3: Groq `GROQ_MODELS` refreshed to current production (5 retired IDs removed); prefix detection extended
+- [x] M4: governance rules wired into `run_refinement`; regex rules enforced (CRITICAL blocks + iterate, others advisory); R100 downgraded to HIGH to avoid non-convergence
+- [x] PID-lock regression fixed (`_looks_like_our_backend`) — desktop launch after machine restart works again; 5 regression tests
+- [ ] Live smokes on profile-sensitive models (`deepseek-r1-distill-qwen-7b-q4_k_m`, `qwen2.5-coder:7b`, `smollm2-1.7b`) + regression `qwen2.5:0.5b`
+- [ ] Sidecar + deb rebuilt with M1–M4 + PID fix
 
 ## Functional (manual / smoke)
 
@@ -13,6 +23,7 @@
 - [x] `POST /generate` with local Ollama (`qwen2.5:0.5b`) — HTTP 200, `success: true`, 3 iterations, integrity signature (2026-07-24; re-verified 2026-10-26)
 - [x] Desktop release binary launches sidecar; `PA_PORT` discovered; `/health` OK (2026-07-24; pack-test re-proves sidecar launch + discovery 2026-10-26)
 - [x] Graceful shutdown via `/shutdown` + system key terminates sidecar (2026-07-24; re-verified 2026-10-26 — header is `x-shutdown-key`)
+- [x] UI click-through attempt 1 (2026-10-26): **FAILED** — "Could not load profiles: Load failed" + blank render. Root cause identified: PID-reuse bug in `entry.py` (any live PID blocked launch after restart) — fixed + regression-tested; re-click-through required on rebuilt binary.
 
 ## Security
 

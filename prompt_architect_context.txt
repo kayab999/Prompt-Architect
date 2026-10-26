@@ -1,10 +1,13 @@
 Prompt Architect Project Context — 2026-10-26
 
-Status: Release Candidate 1.0.2-rc.1 (release engineering pass complete)
+Status: Release Candidate 1.0.2-rc.1 (release engineering + model enablement complete)
 - Prompt refinement pipeline is the primary /generate path (Mask → Linter/AutoFix → LLM → Mask → Sign)
 - OllamaArchitect + GroqArchitect; sidecar uses dynamic port announced via PA_PORT
-- pytest 37 passed; ci/gates.sh green; ci/pack-test.sh green (build → launch → /health)
+- Model enablement M1–M4: app/model_profiles.py + backend/model_profiles.yml (per-family sampling, system-role policy, quirks; DeepSeek-R1 embeds instructions in user message); governance rules wired into run_refinement; Groq catalog refreshed
+- Architect interface: generate(context, *, system, options)
+- pytest 53 passed (incl. test_pid_lock.py, test_model_profiles.py); ci/gates.sh green; ci/pack-test.sh green
+- PID-lock fix in backend/entry.py: recycled live PIDs reclaimed (_looks_like_our_backend checks /proc cmdline)
 - Tribunal/MicroVM experimental, off by default, not wired into /generate
 - Git repo initialized (branch main), tagged v1.0.2-rc.1
-- Pending before 1.0.2 final: human UI click-through (protocol in RELEASE_CHECKLIST.md)
+- Pending before 1.0.2 final: live model smokes (R1 distill, qwen2.5-coder:7b, smollm2), rebuild sidecar + deb, human UI click-through (first attempt failed on the now-fixed PID bug)
 - shutdown endpoint expects header: x-shutdown-key (with hyphens)

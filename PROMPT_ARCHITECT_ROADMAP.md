@@ -28,6 +28,17 @@
 - [x] Restore prompt pipeline contracts  
 - [x] Decouple tribunal from hot path  
 - [x] OllamaArchitect + model list fix  
+
+## Model Enablement (M1–M4 — 2026-10-26, COMPLETE)
+
+Per-model behavior sourced from official model cards; community fine-tunes marked experimental.
+
+- [x] M1: `ModelProfileService` (exact model → family pattern → generic); profile-aware `Architect.generate(context, *, system, options)`; R1-family instructions embedded in user message (no system role)
+- [x] M2: `model_profiles.yml` — DeepSeek-R1 (0.6/0.95, no system role), Qwen2.5-Coder (0.7/0.8/k20 + Qwen identity), Qwen3 (`/no_think`), SmolLM2 (0.2), experimental flags for bonsai/fable/synapse
+- [x] M3: Groq catalog refreshed to current production; prefix detection extended (`openai/`, `qwen/`, `moonshotai/`)
+- [x] M4: governance rules wired into the pipeline (regex enforcement: CRITICAL blocks, others advisory); R100 downgraded to HIGH (non-convergence fix)
+- [x] PID-lock regression fix (desktop launch after machine restart)
+- [ ] Live smokes on profile-sensitive models → then UI click-through → 1.0.2 final
 - [x] Frontend single backend URL  
 - [x] Weak key removal + gate expansion  
 - [x] Test suite 100% green with pipeline contracts  
