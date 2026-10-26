@@ -8,6 +8,7 @@ on:
     branches: [ rc/* ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   gates:
@@ -32,15 +33,37 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: |
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio
+          pip install -r backend/requirements.txt pytest-cov
       - name: Run Pytest
         run: |
           pytest backend/tests --maxfail=1 --cov=backend --cov-report=xml
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-report
+          path: coverage.xml
+
+  frontend:
+    name: 🎨 Frontend Checks
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: svelte-check
+        run: npm run check
+        working-directory: frontend
+      - name: Production build
+        run: npm run build
+        working-directory: frontend
 
   pack-test:
     name: 📦 Packaging Sanity Check
@@ -62,8 +85,8 @@ jobs:
 
   release-candidate:
     name: 🏁 Finalize RC
-    needs: pack-test
+    needs: [pack-test, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Report Success
-        run: echo "Release Candidate 1.0.1-rc1 is VALID and READY."
+        run: echo "Release Candidate 1.0.2-rc.1 is VALID and READY."
