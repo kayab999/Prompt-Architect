@@ -1,0 +1,88 @@
+# Model Profiles Configuration
+# Defines templates, quirks, and stop sequences for supported models.
+
+# --- Efficient Models (Low RAM) ---
+
+tinyllama:latest:
+  model_name: "tinyllama:latest"
+  description: "TinyLlama 1.1B - Extremely fast, good for basic formatting."
+  prompt_template: "<|system|>
+{system_prompt}</s>
+<|user|>
+{user_prompt}</s>
+<|assistant|>
+"
+  quirks:
+    - "Keep instructions very simple."
+    - "Struggles with complex logic."
+    - "Good for rewriting simple sentences."
+  refiner_system_prompt: |
+    You are an expert Prompt Engineer. Rewrite the user's prompt to be clear and precise.
+    
+    User's Intent: {intent}
+    Original Prompt: {prompt}
+
+    Output ONLY the rewritten prompt. No explanations.
+
+
+phi3:mini:
+  model_name: "phi3:mini"
+  description: "Phi-3 Mini 3.8B - High reasoning capability, efficient."
+  prompt_template: "<|user|>
+{user_prompt}<|end|>
+<|assistant|>
+"
+  quirks:
+    - "Excellent reasoning for its size."
+    - "Follows instructions well."
+    - "Can handle code and structured output."
+  refiner_system_prompt: |
+    You are an expert Prompt Engineer. Your goal is to rewrite the user's prompt to be clear, precise, and optimized for an AI model.
+    
+    Principles of good prompting:
+    1. Be specific and descriptive.
+    2. Specify the desired format (e.g., "markdown list", "json", "python code").
+    3. Provide context or roles (e.g., "Act as a senior developer").
+    4. Avoid ambiguity.
+
+    User's Intent: {intent}
+    Original Prompt: {prompt}
+
+    Rewrite this prompt to be significantly better. Output ONLY the rewritten prompt.
+
+deepseek-r1:1.5b:
+  model_name: "deepseek-r1:1.5b"
+  description: "DeepSeek R1 1.5B - Distilled reasoning model. Tiny but smart."
+  prompt_template: "<|User|>{user_prompt}<|Assistant|>"
+  quirks:
+    - "Outputs <think>...</think> blocks before answering."
+    - "Very strong at logic and structure."
+    - "Remove thinking blocks for final output."
+
+# --- Heavyweight Models (High RAM/VRAM - Caution!) ---
+
+"glm4:9b-chat-q4_K_M":
+  model_name: "glm4:9b-chat-q4_K_M"
+  description: "GLM-4 9B - Powerful multilingual model, requires high VRAM."
+  prompt_template: "[gMASK]<sop><|user|>
+{user_prompt}<|assistant|>
+"
+  quirks:
+    - "Strong reasoning capabilities."
+    - "Can be slow on consumer hardware."
+    - "Excellent for complex refinement tasks."
+
+# --- Future Models (If hardware allows) ---
+llama3:8b:
+  model_name: "llama3:8b"
+  description: "Llama 3 8B - The standard for general purpose tasks."
+  prompt_template: "<|start_header_id|>system<|end_header_id|>
+
+{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+"
+  quirks:
+    - "Very chatty, tell it to be concise."
+    - "Great at roleplay."

@@ -1,0 +1,13 @@
+# Base Destructive Tests (Inmutable)
+# These tests are loaded by the TribunalEngine directly and cannot be modified by the LLM.
+
+[tests]
+# Each test defines the binary/script and arguments as a list to avoid shell injection.
+# Structure: { command = ["path", "arg1", "arg2"] }
+
+# Example of deterministic tests
+# [tests.partial_read]
+# command = ["python3", "tribunal_tests/partial_read.py"]
+
+# [tests.arena_reset]
+# command = ["python3", "tribunal_tests/arena_reset.py"]

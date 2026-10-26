@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "task": "Refine for creativity: Write a short story about a talking cat who solves mysteries.",
+    "explanation": "Focus on vivid descriptions, character development, and a compelling plot. Consider using a 'show, don't tell' approach."
+  },
+  {
+    "id": 2,
+    "task": "Refine for conciseness: Summarize the plot of 'Moby Dick' in 50 words or less.",
+    "explanation": "Identify the absolute core elements: Ahab, whale, obsession, tragic end. Eliminate all unnecessary words."
+  },
+  {
+    "id": 3,
+    "task": "Refine for code generation: Write a Python function to calculate the factorial of a number.",
+    "explanation": "Specify the function signature, input/output types, and any edge cases (e.g., negative numbers, zero). Provide examples."
+  }
+]

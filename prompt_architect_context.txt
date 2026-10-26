@@ -1,0 +1,8 @@
+Prompt Architect Project Context — 2026-07-22
+
+Status: Release Candidate 1.0.2-rc.1
+- Prompt refinement pipeline restored as primary /generate path
+- OllamaArchitect + GroqArchitect
+- Frontend uses shared backendUrl (Tauri dynamic port)
+- pytest 35 passed; ci/gates.sh green
+- Tribunal/MicroVM experimental, off by default

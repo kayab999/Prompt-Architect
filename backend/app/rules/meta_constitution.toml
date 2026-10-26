@@ -1,0 +1,22 @@
+# Meta-Constitution for Sovereign Code Forge
+# This file validates generated project.toml files.
+
+[project_validation]
+required_fields = ["project.name", "project.description", "project.language"]
+allowed_languages = ["rust", "python"]
+
+[invariant_validation]
+# The TribunalEngine only understands these IDs.
+# If an invariant in project.toml is not in this list, it's rejected.
+allowed_invariants = [
+    "no_unsafe_blocks",
+    "frame_length_prefixing",
+    "arena_reset_interval",
+    "pydantic_first",
+    "forbidden_patterns",
+    "required_derives"
+]
+
+[metric_validation]
+required_metrics = ["blast_radius_target", "recovery_time_ms"]
+max_blast_radius = 0

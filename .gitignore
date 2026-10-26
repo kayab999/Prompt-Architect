@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+venv/
+env/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.svelte-kit/
+
+# Tauri
+frontend/src-tauri/target/
+frontend/src-tauri/binaries/
+frontend/src-tauri/gen/schemas/
+
+# Build artifacts (PyInstaller / packaging)
+build/
+dist/
+pa-backend.spec.bak
+
+# Logs
+*.log
+
+# Caches
+.pytest_cache/
+.ruff_cache/
+
+# Experimental subsystems (kept locally, not tracked)
+firecracker_images/
+buildroot_config/
+philosohy addon/
+mask_machine_dist/
+portable_engine_dist/
+
+# OS
+.DS_Store
+Thumbs.db

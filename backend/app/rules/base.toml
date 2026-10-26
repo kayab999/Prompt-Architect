@@ -1,0 +1,44 @@
+# === KAYAB CONSTITUTION (BASE RULES) ===
+# These rules apply to ALL flavors. They ensure safety, integrity, and basic structural sanity.
+
+# --- SECURITY & INTEGRITY (Non-Negotiable) ---
+
+[[rules]]
+id = "R001_NO_THINK_TAG"
+severity = "CRITICAL"
+description = "Final output must not contain <think> tags or internal reasoning"
+check_type = "regex"
+pattern = "<think>|</think>|<reasoning>|</reasoning>"
+action_on_fail = "SANITIZE_AND_ARCHIVE"
+
+[[rules]]
+id = "R004_INTEGRITY_SIGNED"
+severity = "CRITICAL"
+description = "Output must be signed with integrity hash"
+check_type = "signature"
+action_on_fail = "BLOCK_OUTPUT"
+
+[[rules]]
+id = "R006_MODEL_DECLARED_SUCCESS"
+severity = "HIGH"
+description = "Model should not claim success in the output text"
+check_type = "regex"
+pattern = "(?i)(i have succeeded|here is the refined|successfully refined)"
+action_on_fail = "STRIP_CLAIM_AND_ITERATE"
+
+# --- BASIC STRUCTURE ---
+
+[[rules]]
+id = "R002_SECTION_COMPLETENESS"
+severity = "CRITICAL"
+description = "All required sections must be present"
+check_type = "structural"
+action_on_fail = "ITERATE"
+
+[[rules]]
+id = "R007_MIN_SECTION_DENSITY"
+severity = "CRITICAL"
+description = "Required sections must meet minimum content threshold"
+check_type = "structural"
+min_tokens = 5
+action_on_fail = "ITERATE"

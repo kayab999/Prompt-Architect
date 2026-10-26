@@ -1,0 +1,69 @@
+name: Prompt Architect / Kayab RC Pipeline
+
+# Workflow to verify and build the Release Candidate
+# Can be used with GitHub Actions or a local task runner.
+
+on:
+  push:
+    branches: [ rc/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  gates:
+    name: 🔒 Security & Code Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gates
+        run: |
+          chmod +x ci/gates.sh
+          ./ci/gates.sh
+
+  test:
+    name: 🧪 Unit & Integration Tests
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio
+      - name: Run Pytest
+        run: |
+          pytest backend/tests --maxfail=1 --cov=backend --cov-report=xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  pack-test:
+    name: 📦 Packaging Sanity Check
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+      - name: Run Pack Test
+        run: |
+          chmod +x ci/pack-test.sh
+          # Note: This might require sudo or specific setup for tauri/system dependencies
+          ./ci/pack-test.sh
+
+  release-candidate:
+    name: 🏁 Finalize RC
+    needs: pack-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report Success
+        run: echo "Release Candidate 1.0.1-rc1 is VALID and READY."

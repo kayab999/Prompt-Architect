@@ -1,0 +1,30 @@
+# === FLAVOR: CREATIVE (Open / Exploratory) ===
+# Use for: Brainstorming, Storytelling, Ideation, Marketing Copy.
+# Philosophy: Inspiration, metaphor, flow. Constraints are soft.
+
+# --- STYLE ---
+
+[[rules]]
+id = "R100_STYLE_NO_SUBJECTIVE"
+severity = "LOW"
+description = "Subjective adjectives allowed in creative context"
+check_type = "regex"
+pattern = "\\b(impossible_pattern_to_disable_check)\\b"
+action_on_fail = "LOG_INFO"
+
+[[rules]]
+id = "R100_STYLE_ALLOW_METAPHORS"
+severity = "LOW"
+description = "Explicitly allow metaphoric language"
+check_type = "regex"
+pattern = "\\b(like a|as if|metaphor|imagine)\\b"
+action_on_fail = "LOG_INFO"
+
+# --- SCHEMA ---
+
+[[rules]]
+id = "R200_SCHEMA_FLEXIBLE_STRUCTURE"
+severity = "LOW"
+description = "Structure is a suggestion, not a mandate"
+check_type = "spec_validation"
+action_on_fail = "LOG_INFO"

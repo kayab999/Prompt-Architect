@@ -1,0 +1,94 @@
+[rule_registry]
+# Las reglas se organizan por prefijo:
+# R001-R099: Sanitization & Output Quality
+# R100-R199: Style Rules (Linter)
+# R200-R299: Schema Rules (Spec Kit)
+# R300-R399: Security & Compliance
+
+# === CRITICAL RULES (Success Gate blockers) ===
+
+[[rules]]
+id = "R001_NO_THINK_TAG"
+severity = "CRITICAL"
+description = "Final output must not contain <think> tags or internal reasoning"
+check_type = "regex"
+pattern = "<think>|</think>|<reasoning>|</reasoning>"
+action_on_fail = "SANITIZE_AND_ARCHIVE"
+
+[[rules]]
+id = "R002_SECTION_COMPLETENESS"
+severity = "CRITICAL"
+description = "All required sections must be present and meet minimum token threshold"
+check_type = "structural"
+required_sections = ["context", "instruction", "constraints"]
+min_tokens_per_section = 10
+action_on_fail = "ITERATE"
+
+[[rules]]
+id = "R004_INTEGRITY_SIGNED"
+severity = "CRITICAL"
+description = "Output must be signed with integrity hash"
+check_type = "signature"
+algorithm = "HS256"
+action_on_fail = "BLOCK_OUTPUT"
+
+[[rules]]
+id = "R200_SCHEMA_REQUIRED_FIELDS"
+severity = "CRITICAL"
+description = "All required fields per Spec Kit must be present"
+check_type = "spec_validation"
+action_on_fail = "ITERATE"
+
+# === HIGH SEVERITY RULES ===
+
+[[rules]]
+id = "R100_STYLE_NO_SUBJECTIVE"
+severity = "HIGH"
+description = "Prohibit subjective adjectives without metrics"
+check_type = "regex"
+pattern = '(mejor|peor|más rápido|más lento|eficiente)'
+action_on_fail = "ITERATE"
+suggestion = "Replace with concrete metrics (e.g., '20% faster' instead of 'faster')"
+
+[[rules]]
+id = "R200_SCHEMA_TYPE_ERROR"
+severity = "HIGH"
+description = "Field types must match Spec Kit definition"
+check_type = "spec_validation"
+action_on_fail = "ITERATE"
+
+[[rules]]
+id = "R005_SENSITIVE_DATA_CHECK"
+severity = "HIGH"
+description = "PII detection score must be below threshold"
+check_type = "pii_scanner"
+threshold = 0.3
+action_on_fail = "REDACT_AND_LOG"
+
+# === MEDIUM SEVERITY RULES ===
+
+[[rules]]
+id = "R100_STYLE_OUTPUT_FORMAT"
+severity = "MEDIUM"
+description = "Output format should be explicitly specified"
+check_type = "field_presence"
+required_field = "output_format"
+action_on_fail = "WARN"
+
+[[rules]]
+id = "R100_STYLE_NO_PLACEHOLDERS"
+severity = "MEDIUM"
+description = "All placeholders {{variable}} must be filled"
+check_type = "regex"
+pattern = '\{\{[^}]+\}\}'
+action_on_fail = "WARN"
+
+# === LOW SEVERITY RULES ===
+
+[[rules]]
+id = "R003_OUTPUT_STANDALONE"
+severity = "LOW"
+description = "Output should be interpretable without internal context"
+check_type = "heuristic"
+action_on_fail = "LOG_INFO"
+

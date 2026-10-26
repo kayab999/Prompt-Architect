@@ -1,0 +1,42 @@
+# === FLAVOR: TECHNICAL (Strict / Deterministic) ===
+# Use for: Code Refactoring, Data Schemas, API Definitions, Configuration.
+# Philosophy: Precision, metric-driven, no ambiguity.
+
+# --- STYLE ---
+
+[[rules]]
+id = "R100_STYLE_NO_SUBJECTIVE"
+severity = "CRITICAL"
+description = "Prohibit subjective adjectives without metrics in technical specs"
+check_type = "regex"
+# Use escaped backslashes for regex in TOML
+pattern = "\\b(better|faster|cleaner|efficient|optimized|good|bad|mejor|rápido|limpio)\\b"
+action_on_fail = "ITERATE"
+suggestion = "Replace with concrete metrics (e.g., 'O(n) complexity' instead of 'efficient')."
+
+[[rules]]
+id = "R100_STYLE_NO_PLACEHOLDERS"
+severity = "HIGH"
+description = "All placeholders {{variable}} must be filled or explicitly documented"
+check_type = "regex"
+pattern = "\\{\\{[^}]+\\}\\}"
+action_on_fail = "WARN"
+
+# --- SCHEMA ---
+
+[[rules]]
+id = "R200_SCHEMA_TYPE_STRICTNESS"
+severity = "HIGH"
+description = "Field types must match exactly (no stringified JSON)"
+check_type = "spec_validation"
+action_on_fail = "ITERATE"
+
+# --- JUSTIFICATION (From "Instagram" & "LLM Whisperers" Insights) ---
+
+[[rules]]
+id = "R010_MANDATORY_JUSTIFICATION"
+severity = "HIGH"
+description = "Any technical score/rating must be accompanied by a justification block"
+check_type = "regex"
+pattern = "(?i)(score|rating|/10).*(justification|rationale|because)"
+action_on_fail = "ITERATE"
