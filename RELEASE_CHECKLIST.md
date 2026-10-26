@@ -2,9 +2,20 @@
 
 ## Automated gates
 
-- [x] `./ci/gates.sh` exits 0 (re-verified 2026-10-26, after model enablement M1–M4)
-- [x] `pytest backend/tests` all pass (**53**: 37 original + 5 PID-lock + 11 model profiles) (2026-10-26)
+- [x] `./ci/gates.sh` exits 0 (re-verified 2026-10-26, after full audit + hardening)
+- [x] `pytest backend/tests` all pass (**58**: 37 original + 6 PID-lock + 15 model profiles/mask/flavor) (2026-10-26)
 - [x] `ci/pack-test.sh` green end-to-end: PyInstaller build → launch → `PA_PORT` discovery → `/health` (2026-10-26; script repaired: root spec path, onefile exe path, dynamic-port discovery)
+
+## Full audit (2026-10-26) — COMPLETE
+
+- [x] Backend hot-path security review (main/api_router/mcp_adapter/pipeline/services/db/config/entry) — parameterized SQL, no XSS sinks, no secrets tracked, key 0600, loopback bind
+- [x] Frontend + Tauri deep-dive — `shell:allow-execute` removed, `__TAURI_INTERNALS__` detection fixed (PA_PORT discovery restored), key-leak fallback port removed, store/clipboard/window perms granted
+- [x] MaskService unclosed-think-block leak fixed (R1 truncation path) + tests
+- [x] Hardware-aware profile clamps (6 GB box: 7B models unloadable; MODEL_PRIMARY → qwen2.5-coder:3b)
+- [x] Persona→flavor mapping (`_resolve_flavor`); groq list_models sync
+- [x] CI activated (.github/workflows/), gates hardened, requirements curated (24 runtime pins), spec .bak entry removed, smoke script --timeout
+- [x] Live smokes: qwen2.5:0.5b, smollm2-1.7b, deepseek-r1:1.5b (R1 no-system-role path), qwen2.5-coder:3b — all 200/success/signed/1 iteration
+- [ ] Rebuild sidecar + deb with audit fixes → UI click-through (protocol below)
 
 ## Model enablement (M1–M4, 2026-10-26)
 

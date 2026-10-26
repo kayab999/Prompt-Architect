@@ -1,13 +1,13 @@
 Prompt Architect Project Context — 2026-10-26
 
-Status: Release Candidate 1.0.2-rc.1 (release engineering + model enablement complete)
+Status: Release Candidate 1.0.2-rc.1 (release engineering + model enablement + full audit complete)
 - Prompt refinement pipeline is the primary /generate path (Mask → Linter/AutoFix → LLM → Mask → Sign)
 - OllamaArchitect + GroqArchitect; sidecar uses dynamic port announced via PA_PORT
 - Model enablement M1–M4: app/model_profiles.py + backend/model_profiles.yml (per-family sampling, system-role policy, quirks; DeepSeek-R1 embeds instructions in user message); governance rules wired into run_refinement; Groq catalog refreshed
 - Architect interface: generate(context, *, system, options)
-- pytest 53 passed (incl. test_pid_lock.py, test_model_profiles.py); ci/gates.sh green; ci/pack-test.sh green
-- PID-lock fix in backend/entry.py: recycled live PIDs reclaimed (_looks_like_our_backend checks /proc cmdline)
-- Tribunal/MicroVM experimental, off by default, not wired into /generate
-- Git repo initialized (branch main), tagged v1.0.2-rc.1
-- Pending before 1.0.2 final: live model smokes (R1 distill, qwen2.5-coder:7b, smollm2), rebuild sidecar + deb, human UI click-through (first attempt failed on the now-fixed PID bug)
+- Full audit 2026-10-26: fixed entry.py PID-reclaim NameError, Tauri v2 __TAURI_INTERNALS__ detection (PA_PORT discovery was dead in packaged app), unscoped shell:allow-execute capability removed, system-key leak fallback port removed, MaskService unclosed-think leak fixed, RAM-aware profile clamps (7B models unloadable on 6 GB RAM box; MODEL_PRIMARY=qwen2.5-coder:3b), persona→flavor mapping, CI activated + hardened, requirements curated to runtime-only
+- pytest 58 passed; ci/gates.sh green; npm run build green
+- Live smokes passed: qwen2.5:0.5b, smollm2-1.7b, deepseek-r1:1.5b (R1 no-system-role), qwen2.5-coder:3b
+- Deferred post-1.0: svelte 5 migration (npm advisories, no XSS sinks so low risk), OS keyring for GROQ key, auto-updater plugin, user_input length cap
+- Pending before 1.0.2 final: rebuild sidecar + deb, human UI click-through
 - shutdown endpoint expects header: x-shutdown-key (with hyphens)

@@ -1,5 +1,47 @@
 # Changelog — Prompt Architect RC
 
+## 1.0.2-rc.1 — 2026-10-26 (full technical + codebase audit)
+
+Scope: hot-path backend review (main/api_router/mcp_adapter/kayab_pipeline/prompt_refinement/services/db/config/entry/hal/models/architects/forge/telemetry), frontend + Tauri deep-dive, dependencies/CI/packaging audit, live model smokes on all four profile families.
+
+### Critical / High (all fixed)
+- **`entry.py` NameError on PID reclaim** — `logger` was never defined; crashed exactly on the post-restart recycled-PID path when the stale PID was signal-able. Defined logger + signal-able-PID regression test.
+- **Unscoped `shell:allow-execute` capability** (Tauri) — webview → arbitrary local command execution. Removed (nothing used it); added the minimal actually-needed perms (`store:default`, clipboard write, window controls — the Groq-key storage path was failing closed at runtime).
+- **Tauri v2 detection bug** — `window.__TAURI__` is never injected without `withGlobalTauri`; 8 call sites (port discovery, backend-error listener, Groq-key store, window buttons, clipboard, preferHttpOnly) were dead in the packaged app → the UI hit baked-in `localhost:8000` → "Could not load profiles: Load failed". Root cause of the failed click-through (co-cause with the PID bug). Fixed via `isTauriRuntime()` (`__TAURI_INTERNALS__`).
+- **System-key leak fallback** (Rust `shutdown_backend`) — POSTed the system key to hardcoded port 8000 when no sidecar port was known. Removed.
+- **Unclosed think blocks leak output** — MaskService only stripped paired ` Holden…  Holden`; R1 truncated mid-think (realistic under num_predict caps) leaked reasoning. Added trailing-block strip + tests.
+
+### Medium (fixed)
+- **7B-class models unloadable on this 6 GB-RAM machine** (Ollama 500 "unable to load model", proven independent of options): added RAM-aware `num_ctx`/`num_predict` clamps to ModelProfileService (≤8 GB → 2048/1024, ≤16 GB → 4096/2048); `MODEL_PRIMARY` → `qwen2.5-coder:3b`; YAML default `num_ctx` 4096.
+- **Persona/flavor mismatch** — 9 persona keys + UI intents mapped into `flavor`, but only technical/creative flavors exist → silently base-rules-only. Added `_resolve_flavor` mapping.
+- **`groq_architect.list_models()`** returned retired model IDs — synced with `GROQ_MODELS`.
+- **CI never ran** — `rc-pipeline.yml` wasn't under `.github/workflows/`. Moved.
+- **Gates hardening** — removed `# allowed` weak-key escape hatch; CSP empty-check covers null/whitespace variants; weak-key scan includes `entry.py`.
+- **requirements.txt was a raw 68-line `pip freeze`** shipping the unused langchain/langgraph stack, rouge_score/nltk/numpy, and dev tooling — curated to 24 runtime pins; `requirements-dev.txt` added.
+- **`pa-backend.spec`** referenced the deleted `prompt_library.json.bak` (PyInstaller silently drops missing datas — verified — but the entry was stale); removed.
+
+### Low / Info (documented, deferred)
+- svelte 4.2.12 npm-audit advisories (fix = svelte 5 major; no XSS sinks exist in the app — text-interpolation only — so practical risk is low; migrate post-1.0).
+- No auto-updater plugin configured; deb-only target, manual updates for now.
+- GROQ key stored in plaintext plugin-store file (OS keyring recommended post-1.0).
+- HAL: multi-GPU `nvidia-smi` parsing assumes single line; rocm-smi VRAM is a hardcoded 8.0 placeholder.
+- `GenerateRequest.user_input` has no length cap (local-only endpoint; add limit post-RC).
+- Dead code retained but unbundled: `mcp_server.py`, `forge.py`, `sqlog/`, microvm/tribunal modules, `models.py` unused request types.
+- Actions pinned to moving tags (no remote yet — pin to SHAs when one is added).
+- pack-test: kill targets the `timeout` wrapper; backend may briefly outlive it (PID lock makes a re-run fail-closed, not flaky-fail).
+
+### Verified clean
+- No SQL injection (parameterized everywhere), no XSS sinks in frontend (no `{@html}`/`innerHTML`/eval), no secrets in tracked files or git history, system key 0600, loopback-only bind, no known-vulnerable pins among used Python deps, spec bundles profiles.yml + model_profiles.yml + rules correctly, PyInstaller bundle excludes dead subsystems.
+
+### Live smokes (2026-10-26, all HTTP 200 / success / signed / 1 iteration)
+- `qwen2.5:0.5b` (regression), `smollm2-1.7b` (temp 0.2 profile), `deepseek-r1:1.5b` (R1 no-system-role path), `qwen2.5-coder:3b` (coder family).
+- 7B-class models documented unloadable on this hardware (6 GB RAM); use Groq cloud for large models.
+
+### Tests
+- Suite: **58 passing** (37 original + 6 PID + 15 model profiles/mask/flavor). `./ci/gates.sh` green. `npm run build` green.
+
+---
+
 ## 1.0.2-rc.1 — 2026-10-26 (model enablement M1–M4 + PID-lock fix)
 
 ### Critical fix — desktop launch after machine restart
