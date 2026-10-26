@@ -9,7 +9,6 @@ a = Analysis(
         ('backend/app/profiles.yml', 'app'),
         ('backend/model_profiles.yml', '.'),
         ('backend/app/rules', 'app/rules'),
-        ('backend/app/prompt_library.json.bak', 'app'),
     ],
     hiddenimports=[
         'uvicorn.logging',

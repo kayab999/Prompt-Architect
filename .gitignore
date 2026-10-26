@@ -43,6 +43,18 @@ philosohy addon/
 mask_machine_dist/
 portable_engine_dist/
 
+# Local runtime data (SQLite library is user data, not source)
+backend/data/
+
+# Dev-session leftovers (untracked 2026-10-26 audit; kept on disk)
+backend/patch_pipeline.py
+backend/patch_pipeline_2.py
+backend/generated_code.rs
+backend/quest_log.toml
+backend/test_quest_log.toml
+backend/build_certificate.toml
+backend/pip_freeze_output.txt
+
 # OS
 .DS_Store
 Thumbs.db

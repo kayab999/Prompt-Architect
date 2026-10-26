@@ -21,17 +21,17 @@ fi
 
 # 2. Check for weak default keys
 echo "🔍 Checking for hardcoded weak keys..."
-if grep -rnE "default_dev_key|default_key_safe_for_local|['\"]dev_key['\"]|['\"]default_key['\"]" backend/app --include='*.py' \
-  | grep -v "tests/" | grep -v "# allowed"; then
+if grep -rnE "default_dev_key|default_key_safe_for_local|['\"]dev_key['\"]|['\"]default_key['\"]" backend/app backend/entry.py --include='*.py' \
+  | grep -v "tests/"; then
     echo "❌ FAIL: Found hardcoded weak/default keys."
     FAILURES=$((FAILURES+1))
 else
     echo "✅ PASS: No hardcoded weak default keys found."
 fi
 
-# 3. Check for Empty CSP in Tauri
+# 3. Check for Empty CSP in Tauri (whitespace/null variants included)
 echo "🔍 Checking Tauri CSP..."
-if grep -q '"csp": ""' frontend/src-tauri/tauri.conf.json; then
+if grep -qE '"csp":\s*(""|null)' frontend/src-tauri/tauri.conf.json; then
     echo "❌ FAIL: CSP is empty in tauri.conf.json."
     FAILURES=$((FAILURES+1))
 else

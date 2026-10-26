@@ -22,6 +22,13 @@ def main() -> int:
         "--prompt",
         default="Write a short prompt for summarizing meeting notes",
     )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=180,
+        help="Client timeout in seconds; iterative refinement of small local "
+        "models on CPU can exceed the default",
+    )
     args = parser.parse_args()
 
     payload = {
@@ -36,7 +43,7 @@ def main() -> int:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
+        with urllib.request.urlopen(req, timeout=args.timeout) as resp:
             body = json.loads(resp.read().decode("utf-8"))
             print("HTTP", resp.status)
             print(json.dumps(body, indent=2)[:2000])
