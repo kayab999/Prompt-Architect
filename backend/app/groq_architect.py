@@ -73,21 +73,12 @@ class GroqArchitect(Architect): # Inherit from Architect
 
     async def list_models(self) -> List[str]:
         """
-        Lists available Groq models.
-        Note: This is a simplified list. A real implementation might fetch dynamically.
+        Lists available Groq models (static catalog, kept in sync with
+        mcp_adapter.GROQ_MODELS — the authoritative list).
         """
-        # For now, returning the predefined list as specified in mcp_adapter.py
-        # A more robust implementation would call Groq API to get available models.
-        return [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "llama-3.2-3b-preview",
-            "llama-3.2-11b-vision-preview",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it",
-            "qwen-2.5-32b",
-            "qwen-2.5-coder-32b",
-        ]
+        from .mcp_adapter import GROQ_MODELS
+
+        return list(GROQ_MODELS)
 
     async def health_check(self) -> bool:
         """

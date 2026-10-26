@@ -133,9 +133,10 @@ settings = Settings()
 # --- 5. KAYAB Cognitive Configuration ---
 class KayabSettings(BaseSettings):
     # Primary model strategy (informational for now; /generate uses the
-    # user-selected model). Must point at an installed model so the log line
-    # reflects reality.
-    MODEL_PRIMARY: str = "qwen2.5-coder:7b"
+    # user-selected model). Must be a model this machine can actually load:
+    # 7B-class models do not fit in RAM on an 8 GB machine (Ollama declines
+    # the load), so the primary is 3B and the fallback 0.5B.
+    MODEL_PRIMARY: str = "qwen2.5-coder:3b"
     MODEL_FALLBACK: str = "qwen2.5:0.5b"
 
     PID_OPT_IN: bool = False

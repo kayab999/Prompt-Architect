@@ -35,6 +35,15 @@ def test_recycled_live_pid_is_reclaimed(pid_file):
     assert pid_file.read_text().strip() == str(os.getpid())
 
 
+def test_recycled_signalable_pid_is_reclaimed(pid_file, monkeypatch):
+    """A live, signal-able PID owned by another process must be reclaimed
+    WITHOUT hitting the (previously undefined) logger — NameError regression."""
+    monkeypatch.setattr(entry_module, "_looks_like_our_backend", lambda pid: False)
+    pid_file.write_text(str(os.getpid()))  # live pytest process, signal-able
+    entry_module.check_pid_lock()
+    assert pid_file.read_text().strip() == str(os.getpid())
+
+
 def test_live_our_pid_blocks_startup(pid_file, monkeypatch):
     pid_file.write_text(str(os.getpid()))
     monkeypatch.setattr(entry_module, "_looks_like_our_backend", lambda pid: True)

@@ -8,6 +8,8 @@ import logging
 # Ensure the current directory is in the path so we can import 'app'
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+logger = logging.getLogger("PromptArchitect")
+
 from app.main import app
 from app.config import settings
 

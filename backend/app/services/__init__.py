@@ -115,12 +115,17 @@ class MaskService:
         clean_text, n_subs = re.subn(
             r"<think>.*?</think>", "", text, flags=re.DOTALL
         )
+        # Truncated generations (num_predict cap mid-think) leave an unclosed
+        # opener; without this fallback its content leaks into the output.
+        clean_text, n_unclosed = re.subn(
+            r"<think>.*\Z", "", clean_text, flags=re.DOTALL
+        )
         clean_text = clean_text.strip()
         redacted_text, redacted_types = self.redact(clean_text)
         return {
             "clean_text": redacted_text,
             "metadata": {
-                "think_tags_removed": n_subs,
+                "think_tags_removed": n_subs + n_unclosed,
                 "pii_redacted": len(redacted_types) > 0,
                 "redacted_types": redacted_types,
                 "sections_masked": [],

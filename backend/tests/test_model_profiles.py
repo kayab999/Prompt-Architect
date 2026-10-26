@@ -77,6 +77,32 @@ def test_groq_options_shape():
     assert opts["max_tokens"] > 0
 
 
+def test_clamp_on_low_ram_machine(monkeypatch):
+    """6 GB-class machines: KV cache options must be capped or Ollama
+    refuses the model load entirely (HTTP 500 'unable to load model')."""
+    import psutil
+
+    class FakeVM:
+        total = 6 * 1024**3
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+    p = SERVICE.resolve("qwen3:8b")
+    assert p.num_ctx == 2048
+    assert p.num_predict == 1024
+
+
+def test_no_clamp_on_large_ram_machine(monkeypatch):
+    import psutil
+
+    class FakeVM:
+        total = 32 * 1024**3
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+    p = SERVICE.resolve("deepseek-r1:7b")
+    assert p.num_ctx == 4096  # YAML default preserved
+    assert p.num_predict == 4096  # R1 family value preserved
+
+
 def test_build_architect_groq_by_prefix():
     from app.groq_architect import GroqArchitect
 
@@ -179,6 +205,17 @@ def test_pipeline_generic_profile_is_backward_compatible():
     # options injected (pre-profiles behavior).
     assert "Prompt Architect" in captured["system"]
     assert captured["options"] is None
+
+
+def test_flavor_resolution_maps_unknown_flavors():
+    from app.mcp_adapter import _resolve_flavor
+
+    assert _resolve_flavor("technical") == "technical"
+    assert _resolve_flavor("creative") == "creative"
+    # Persona keys / UI intents are not rule flavors → mapped to technical
+    assert _resolve_flavor("prompt_engineer") == "technical"
+    assert _resolve_flavor("senior_dev") == "technical"
+    assert _resolve_flavor("concise") == "technical"
 
 
 @pytest.mark.asyncio

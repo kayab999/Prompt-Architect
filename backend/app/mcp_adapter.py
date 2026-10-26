@@ -56,6 +56,16 @@ OLLAMA_DEFAULTS = [
     "tinyllama:latest",
 ]
 
+# Shipped rule flavors (app/rules/flavors/). Persona keys from profiles.yml
+# (senior_dev, prompt_engineer, …) and UI intents (concise, …) are NOT rule
+# flavors — mapping them through here prevents silently running with
+# base-rules-only.
+KNOWN_FLAVORS = ("technical", "creative")
+
+
+def _resolve_flavor(flavor: str) -> str:
+    return flavor if flavor in KNOWN_FLAVORS else "technical"
+
 
 def _build_architect(model: str, groq_api_key: Optional[str] = None):
     """
@@ -98,7 +108,7 @@ async def run_refinement(
     mask = MaskService()
 
     config = {
-        "flavor": flavor,
+        "flavor": _resolve_flavor(flavor),
         "max_iterations": max_iterations,
         "token_budget": 4000,
         "service_key": settings.SYSTEM_KEY,

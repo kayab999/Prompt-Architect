@@ -21,6 +21,20 @@ def test_mask_sanitize_contract():
     assert "[REDACTED_EMAIL]" in result["clean_text"]
     assert result["metadata"]["think_tags_removed"] == 1
 
+def test_mask_strips_unclosed_think_block():
+    """Truncated R1 output (num_predict cap mid-think) must not leak
+    thinking content into the refined prompt."""
+    mask = MaskService()
+    result = mask.sanitize({"raw_text": "<think>secret reasoning never closed"})
+    assert "secret" not in result["clean_text"]
+    assert result["clean_text"] == ""
+    assert result["metadata"]["think_tags_removed"] == 1
+
+    # Paired + trailing unclosed mix
+    mixed = mask.sanitize({"raw_text": "<think>a</think> answer <think>b"})
+    assert mixed["clean_text"] == "answer"
+    assert mixed["metadata"]["think_tags_removed"] == 2
+
 
 def test_spec_get_default():
     validator = SpecValidator()

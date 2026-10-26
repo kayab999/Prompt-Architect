@@ -118,7 +118,7 @@ class ModelProfileService:
         merged.pop("family", None)
 
         top_k = merged.get("top_k")
-        return ModelProfile(
+        profile = ModelProfile(
             model_id=model_id,
             family=family_name,
             description=str(merged.get("description", "")),
@@ -133,3 +133,27 @@ class ModelProfileService:
             extra_system_directives=str(merged.get("extra_system_directives", "") or ""),
             experimental=bool(merged.get("experimental", False)),
         )
+        return clamp_to_hardware(profile)
+
+
+def clamp_to_hardware(profile: ModelProfile) -> ModelProfile:
+    """Clamp KV-cache-related options to what the machine can actually hold.
+
+    Ollama declines model loads (HTTP 500) when weights + KV cache do not fit;
+    7B-class models are unloadable on 8 GB machines. Caps: <=8 GB → 2048 ctx /
+    1024 out; <=16 GB → 4096 ctx / 2048 out; larger machines keep YAML values.
+    """
+    caps = {"num_ctx": 8192, "num_predict": 4096}
+    try:
+        import psutil
+
+        total_gb = psutil.virtual_memory().total / (1024**3)
+    except Exception:  # psutil unavailable → keep YAML values
+        return profile
+    if total_gb <= 8:
+        caps = {"num_ctx": 2048, "num_predict": 1024}
+    elif total_gb <= 16:
+        caps = {"num_ctx": 4096, "num_predict": 2048}
+    profile.num_ctx = min(profile.num_ctx, caps["num_ctx"])
+    profile.num_predict = min(profile.num_predict, caps["num_predict"])
+    return profile
