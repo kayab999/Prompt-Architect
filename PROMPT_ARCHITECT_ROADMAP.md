@@ -33,6 +33,14 @@
 - [x] Test suite 100% green with pipeline contracts  
 - [x] Docs honesty (RC, not false “stable”)  
 
+## RC Release Engineering (2026-10-26)
+
+- [x] Git repo + `v1.0.2-rc.1` tag  
+- [x] `ci/pack-test.sh` repaired (spec path, onefile exe, `PA_PORT` discovery)  
+- [x] `ci/rc-pipeline.yml` repaired (pytest-cov, frontend job, version string)  
+- [x] Full live re-verification (health/models/generate/shutdown) on fresh binary  
+- [x] Workspace hygiene (junk logs, `.bak` files, secret-bearing personal script removed)  
+
 ## Future (v1.1.0+)
 
 - [ ] Persistent memory / session resume  

@@ -1,8 +1,10 @@
-Prompt Architect Project Context — 2026-07-22
+Prompt Architect Project Context — 2026-10-26
 
-Status: Release Candidate 1.0.2-rc.1
-- Prompt refinement pipeline restored as primary /generate path
-- OllamaArchitect + GroqArchitect
-- Frontend uses shared backendUrl (Tauri dynamic port)
-- pytest 35 passed; ci/gates.sh green
-- Tribunal/MicroVM experimental, off by default
+Status: Release Candidate 1.0.2-rc.1 (release engineering pass complete)
+- Prompt refinement pipeline is the primary /generate path (Mask → Linter/AutoFix → LLM → Mask → Sign)
+- OllamaArchitect + GroqArchitect; sidecar uses dynamic port announced via PA_PORT
+- pytest 37 passed; ci/gates.sh green; ci/pack-test.sh green (build → launch → /health)
+- Tribunal/MicroVM experimental, off by default, not wired into /generate
+- Git repo initialized (branch main), tagged v1.0.2-rc.1
+- Pending before 1.0.2 final: human UI click-through (protocol in RELEASE_CHECKLIST.md)
+- shutdown endpoint expects header: x-shutdown-key (with hyphens)

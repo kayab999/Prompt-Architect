@@ -1,5 +1,24 @@
 # Changelog — Prompt Architect RC
 
+## 1.0.2-rc.1 — 2026-10-26 (release engineering + full re-verification)
+
+### Release engineering
+- Initialized **git** repository; history starts at the pre-cleanup snapshot; tagged `v1.0.2-rc.1`.
+- Repaired `ci/pack-test.sh` (was guaranteed-fail): root `pa-backend.spec` path, onefile `dist/pa-backend` path, **dynamic-port discovery via `PA_PORT`** (same protocol as Tauri), `/health` expects `healthy`, venv-aware PyInstaller.
+- Repaired `ci/rc-pipeline.yml`: current version string, `pytest-cov` installed, coverage uploaded as artifact, added **frontend job** (`svelte-check` + build), `workflow_dispatch` trigger.
+- Live re-verification on freshly built binary: `/health`, `/status`, `/models`, `POST /generate` (`qwen2.5:0.5b` → 200, `success: true`, signature), authenticated graceful shutdown (`x-shutdown-key`) → process exit.
+- AppImage formally deferred to post-1.0 (deb is the supported Linux target).
+
+### Hygiene
+- Deleted unreferenced `backend/app/prompt_library.json.bak`; removed stale root logs.
+- Moved `test-backend.sh` → `backend/scripts/legacy/`; moved personal `backup_tools.py` out of the repo (contained an embedded secret; scrubbed from history).
+- Gitignored experimental trees (`firecracker_images/`, `buildroot_config/`, `philosohy addon/`, `*_dist/`) — kept locally, not tracked.
+
+### Not verified yet
+- Human UI click-through (generate in window) — protocol in RELEASE_CHECKLIST.
+
+---
+
 ## 1.0.2-rc.1 — 2026-07-24 (verification + packaging)
 
 ### Verification completed
