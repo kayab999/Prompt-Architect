@@ -83,7 +83,17 @@ fn detect_linux_theme() -> String {
 async fn shutdown_backend(app: &AppHandle) {
     let port_state = app.state::<BackendPort>();
     let port_lock = port_state.0.lock().await;
-    let port = port_lock.unwrap_or(8000);
+    // Never fall back to a hardcoded port: the shutdown request carries the
+    // system key, and POSTing it to whatever process squats on 8000 would
+    // leak the secret. If the sidecar never published a port, it is either
+    // dead (killed below) or unknown — skip the handshake.
+    let port = match *port_lock {
+        Some(p) => p,
+        None => {
+            println!("[Tauri] No sidecar port known; skipping shutdown handshake.");
+            return;
+        }
+    };
     drop(port_lock);
 
     let system_key = app.state::<SystemKey>().0.clone();

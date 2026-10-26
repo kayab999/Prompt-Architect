@@ -3,6 +3,7 @@
   import { Store } from "@tauri-apps/plugin-store";
   import Button from "$lib/components/common/Button.svelte";
   import { app } from "$lib/stores/app";
+  import { isTauriRuntime } from "$lib/services/tauri";
 
   let groqApiKey: string = "";
   let store: Store | null = null;
@@ -10,7 +11,7 @@
 
   onMount(async () => {
     try {
-        if (window.__TAURI__) {
+        if (isTauriRuntime()) {
             store = await Store.load("app-settings.dat");
             if (store) {
                 groqApiKey = ((await store.get("GROQ_API_KEY")) as string) || "";

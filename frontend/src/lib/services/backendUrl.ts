@@ -3,6 +3,8 @@
  * Resolves Tauri dynamic port when running in the desktop shell.
  */
 
+import { isTauriRuntime } from "./tauri";
+
 let cachedBaseUrl: string | null = null;
 let resolvePromise: Promise<string> | null = null;
 
@@ -22,7 +24,7 @@ export async function resolveBackendBaseUrl(force = false): Promise<string> {
 
   resolvePromise = (async () => {
     // Prefer Tauri-discovered sidecar port
-    if (typeof window !== "undefined" && (window as any).__TAURI__) {
+    if (isTauriRuntime()) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const port = await invoke<number>("get_backend_port");

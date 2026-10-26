@@ -1,5 +1,6 @@
 <script lang="ts">
   import ProfileSelector from "./ProfileSelector.svelte";
+  import { isTauriRuntime } from "../services/tauri";
   import {
     originalPrompt,
     model,
@@ -59,7 +60,7 @@
 
       let groqApiKey: string | undefined;
       if (isGroqModel) {
-        if (window.__TAURI__) {
+        if (isTauriRuntime()) {
           const { Store } = await import("@tauri-apps/plugin-store");
           const store = await Store.load("app-settings.dat");
           groqApiKey = (await store.get("GROQ_API_KEY")) as string;

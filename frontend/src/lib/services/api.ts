@@ -25,7 +25,7 @@ export async function initializeBackend() {
       mcpToken: import.meta.env.VITE_MCP_TOKEN as string | undefined,
       // In Tauri / local desktop, only the HTTP sidecar matters
       preferHttpOnly:
-        Boolean((window as any).__TAURI__) ||
+        isTauriRuntime() ||
         import.meta.env.VITE_PREFER_HTTP === "1",
     };
 

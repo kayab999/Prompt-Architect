@@ -3,8 +3,20 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 
 export const isTauri = writable(false);
 
+/**
+ * Tauri v2 runtime detection.
+ *
+ * Tauri v2 injects `window.__TAURI_INTERNALS__` always, but `window.__TAURI__`
+ * only when `app.withGlobalTauri` is enabled (it is NOT in this project) —
+ * so legacy `__TAURI__` checks silently evaluate false in the packaged app
+ * and break dynamic PA_PORT discovery, store access, and event listeners.
+ */
+export function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+}
+
 export async function initializeTauri() {
-  if (window.__TAURI__) {
+  if (isTauriRuntime()) {
     isTauri.set(true);
     const { appWindow } = await import('@tauri-apps/api/window');
 
@@ -15,7 +27,7 @@ export async function initializeTauri() {
 }
 
 export async function copyToClipboard(text: string) {
-    if (window.__TAURI__) {
+    if (isTauriRuntime()) {
         await writeText(text);
     } else {
         await navigator.clipboard.writeText(text);

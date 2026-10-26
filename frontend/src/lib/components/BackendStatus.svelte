@@ -1,10 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { connectionState } from '../services/mcpAdapter';
+    import { isTauriRuntime } from '../services/tauri';
     import { app } from '../stores/app';
 
     onMount(async () => {
-        if (window.__TAURI__) {
+        if (isTauriRuntime()) {
             const { listen } = await import('@tauri-apps/api/event');
             
             // Listen for sidecar errors emitted from Rust
