@@ -132,7 +132,10 @@ settings = Settings()
 
 # --- 5. KAYAB Cognitive Configuration ---
 class KayabSettings(BaseSettings):
-    MODEL_PRIMARY: str = "kayab-cortex-0:latest"
+    # Primary model strategy (informational for now; /generate uses the
+    # user-selected model). Must point at an installed model so the log line
+    # reflects reality.
+    MODEL_PRIMARY: str = "qwen2.5-coder:7b"
     MODEL_FALLBACK: str = "qwen2.5:0.5b"
 
     PID_OPT_IN: bool = False

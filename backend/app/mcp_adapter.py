@@ -19,9 +19,10 @@ from .config import settings
 from .db import list_prompts, parse_prompt_row
 from .groq_architect import GroqArchitect
 from .kayab_pipeline import PromptRefinementPipeline, SovereignCodePipeline
+from .model_profiles import ModelProfileService
 from .ollama_architect import OllamaArchitect, _extract_models
 from .prompt_refinement import PromptLinter
-from .services import MaskService, SpecValidator
+from .services import MaskService, RuleLoader, SpecValidator
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +40,13 @@ __all__ = [
 ]
 
 GROQ_MODELS = [
-    "llama-3.3-70b-versatile",
+    # Production text models on Groq (verified against console.groq.com 2026-10-26).
+    # Retired IDs (mixtral-8x7b-32768, llama-3.2-*preview*, gemma2-9b-it,
+    # qwen-2.5-32b/coder-32b) removed — they 404 on the API now.
     "llama-3.1-8b-instant",
-    "llama-3.2-3b-preview",
-    "llama-3.2-11b-vision-preview",
-    "mixtral-8x7b-32768",
-    "gemma2-9b-it",
-    "qwen-2.5-32b",
-    "qwen-2.5-coder-32b",
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
 ]
 
 OLLAMA_DEFAULTS = [
@@ -62,7 +62,7 @@ def _build_architect(model: str, groq_api_key: Optional[str] = None):
     Factory: returns the right Architect for the model string.
     """
     is_groq_pattern = model in GROQ_MODELS or model.startswith(
-        ("llama-3", "mixtral", "gemma", "qwen-2.5")
+        ("llama-3", "mixtral", "gemma", "qwen-2.5", "openai/", "qwen/", "moonshotai/")
     )
 
     if is_groq_pattern:
@@ -102,6 +102,8 @@ async def run_refinement(
         "max_iterations": max_iterations,
         "token_budget": 4000,
         "service_key": settings.SYSTEM_KEY,
+        "model_profile": ModelProfileService().resolve(model),
+        "rules": RuleLoader.load_rules(flavor),
     }
 
     pipeline = PromptRefinementPipeline(

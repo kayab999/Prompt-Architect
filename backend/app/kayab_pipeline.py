@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -82,6 +83,14 @@ class PromptRefinementPipeline:
         requester = requester or {}
         audit_tags: List[str] = [f"flavor_{self.flavor}", f"version_{APP_VERSION}"]
 
+        profile = self.config.get("model_profile")
+        rules = self.config.get("rules") or []
+        governance = self._governance_text(rules)
+        if rules:
+            audit_tags.append(f"rules_{len(rules)}")
+        if profile is not None and profile.experimental:
+            audit_tags.append("experimental_model")
+
         if not user_intent or not str(user_intent).strip():
             return self._fail("Empty user input", audit_tags=audit_tags)
 
@@ -112,12 +121,18 @@ class PromptRefinementPipeline:
                 if remaining
                 else "- None"
             )
-            system = REFINE_SYSTEM_TEMPLATE.format(
-                flavor=self.flavor, diagnostics=diag_text
-            )
-            context = f"{system}\n\nUser request:\n{working}"
+            system = self._build_system_text(diag_text, governance)
+            opts = profile.ollama_options() if profile is not None else None
 
-            draft = await self.architect.generate(context)
+            if profile is not None and not profile.use_system_role:
+                # DeepSeek-R1 family: no system role — instructions go in the
+                # user message (official model-card guidance).
+                context = f"{system}\n\nUser request:\n{working}"
+                draft = await self.architect.generate(context, options=opts)
+            else:
+                draft = await self.architect.generate(
+                    working, system=system, options=opts
+                )
             if draft.get("error"):
                 logger.error("Architect error: %s", draft.get("error"))
                 return self._fail(
@@ -147,11 +162,20 @@ class PromptRefinementPipeline:
             if out_fixes:
                 audit_tags.append(f"out_autofix_{'+'.join(out_fixes)}")
 
+            # Governance regex rules on the model output
+            rule_diags = self._apply_regex_rules(candidate, rules)
+            blocked = [d for d in rule_diags if d.severity == "error"]
+            advisory = [d for d in rule_diags if d.severity != "error"]
+
             remaining = [
                 d
                 for d in self.linter.lint(candidate)
                 if d.code in ("S001", "S004") and d.severity == "error"
             ]
+            remaining.extend(blocked)
+            # Advisory rule hits steer the next iteration; they do not block.
+            if advisory and iteration < self.max_iterations:
+                remaining.extend(advisory)
 
             # Soft spec check
             if self.spec_validator is not None:
@@ -207,6 +231,76 @@ class PromptRefinementPipeline:
             iterations=iterations_used,
             last_raw=last_raw,
         )
+
+    def _governance_text(self, rules: List[Dict[str, Any]]) -> str:
+        """Surface CRITICAL/HIGH governance rules as prompt guidance."""
+        relevant = [
+            r
+            for r in rules
+            if r.get("severity") in ("CRITICAL", "HIGH") and r.get("description")
+        ][:8]
+        if not relevant:
+            return ""
+        lines = "\n".join(f"- {r['description']}" for r in relevant)
+        return f"Governance rules (must hold for the final output):\n{lines}"
+
+    def _build_system_text(
+        self, diag_text: str, governance: str
+    ) -> str:
+        """Compose the system/instruction text: base template + governance +
+        model-family directives and quirks."""
+        parts = [REFINE_SYSTEM_TEMPLATE.format(flavor=self.flavor, diagnostics=diag_text)]
+        profile = self.config.get("model_profile")
+        if governance:
+            parts.append(governance.strip())
+        if profile is not None:
+            if profile.extra_system_directives:
+                parts.append(profile.extra_system_directives.strip())
+            if profile.quirks:
+                quirks = "\n".join(f"- {q}" for q in profile.quirks)
+                parts.append(f"Model quirks:\n{quirks}")
+            if profile.experimental:
+                parts.append(
+                    "Note: this model is experimental; keep instructions explicit "
+                    "and verify the result."
+                )
+        return "\n\n".join(parts)
+
+    def _apply_regex_rules(
+        self, text: str, rules: List[Dict[str, Any]]
+    ) -> List[Diagnostic]:
+        """Evaluate regex-type governance rules against candidate output.
+
+        CRITICAL violations become error diagnostics (iterate); the rest are
+        advisory guidance for the next pass.
+        """
+        diags: List[Diagnostic] = []
+        for rule in rules:
+            if rule.get("check_type") != "regex":
+                continue
+            pattern = rule.get("pattern")
+            if not pattern:
+                continue
+            try:
+                if re.search(pattern, text):
+                    diags.append(
+                        Diagnostic(
+                            code=str(rule.get("id", "RULE")),
+                            category="Rule",
+                            message=str(
+                                rule.get("description", "Governance rule violated")
+                            ),
+                            severity="error"
+                            if rule.get("severity") == "CRITICAL"
+                            else "warning",
+                            fixable=False,
+                        )
+                    )
+            except re.error as exc:
+                logger.warning(
+                    "Invalid governance pattern for %s: %s", rule.get("id"), exc
+                )
+        return diags
 
     def _sign_output(self, text: str) -> Dict[str, str]:
         payload = {

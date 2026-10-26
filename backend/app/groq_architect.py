@@ -14,15 +14,37 @@ class GroqArchitect(Architect): # Inherit from Architect
         self.client = AsyncGroq(api_key=api_key)
         logger.info("Initialized GroqArchitect for model: %s", self.model_id)
 
-    async def generate(self, context: str) -> Dict[str, Any]:
+    async def generate(
+        self,
+        context: str,
+        *,
+        system: str = "",
+        options: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
         """Generates a draft prompt using Groq."""
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model_id,
-                messages=[{"role": "user", "content": context}],
-                temperature=0.7,
-                max_tokens=4096,
-            )
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": context})
+
+            params: Dict[str, Any] = {
+                "model": self.model_id,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 4096,
+            }
+            if options:
+                allowed = ("temperature", "top_p", "max_tokens", "stop")
+                params.update(
+                    {
+                        k: v
+                        for k, v in options.items()
+                        if k in allowed and v is not None
+                    }
+                )
+
+            response = await self.client.chat.completions.create(**params)
             text = response.choices[0].message.content or ""
             prompt_tokens = (
                 response.usage.prompt_tokens if response.usage else len(context) // 4

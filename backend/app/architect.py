@@ -5,7 +5,7 @@ Concrete implementations should handle communication with specific LLM providers
 (e.g., Ollama, Groq, OpenAI).
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,12 +22,22 @@ class Architect:
         self.model_id = model_name
         logger.info(f"Initializing Architect for model: {self.model_id}")
 
-    async def generate(self, context: str) -> Dict[str, Any]:
+    async def generate(
+        self,
+        context: str,
+        *,
+        system: str = "",
+        options: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Generates a draft prompt using the wrapped LLM.
 
         Args:
-            context: The input prompt or context for the LLM.
+            context: The user-side prompt or context for the LLM.
+            system: Optional system message. When empty, providers receive a
+                single user message (required for DeepSeek-R1 family).
+            options: Optional provider-specific sampling parameters
+                (temperature, top_p, top_k, stop, num_ctx, num_predict...).
 
         Returns:
             A dictionary containing the generated text, token usage, and confidence.

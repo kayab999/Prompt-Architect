@@ -6,13 +6,17 @@
 
 [[rules]]
 id = "R100_STYLE_NO_SUBJECTIVE"
-severity = "CRITICAL"
+severity = "HIGH"
 description = "Prohibit subjective adjectives without metrics in technical specs"
 check_type = "regex"
 # Use escaped backslashes for regex in TOML
 pattern = "\\b(better|faster|cleaner|efficient|optimized|good|bad|mejor|rápido|limpio)\\b"
 action_on_fail = "ITERATE"
 suggestion = "Replace with concrete metrics (e.g., 'O(n) complexity' instead of 'efficient')."
+# Severity note (2026-10-26): downgraded CRITICAL→HIGH. Subjective adjectives
+# are legal in refined prose and blocking on them caused non-convergence
+# (max-iterations soft-fail) on well-formed outputs. Enforced as advisory
+# guidance for the next iteration instead of a hard gate.
 
 [[rules]]
 id = "R100_STYLE_NO_PLACEHOLDERS"

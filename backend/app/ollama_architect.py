@@ -16,7 +16,7 @@ class OllamaArchitect(Architect):
 
     def __init__(
         self,
-        model_name: str = "llama3.2:latest",
+        model_name: str = "qwen2.5:0.5b",
         host: Optional[str] = None,
         timeout: Optional[float] = None,
     ):
@@ -33,16 +33,29 @@ class OllamaArchitect(Architect):
             self._client = ollama.AsyncClient(host=self.host)
         return self._client
 
-    async def generate(self, context: str) -> Dict[str, Any]:
+    async def generate(
+        self,
+        context: str,
+        *,
+        system: str = "",
+        options: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         try:
             import asyncio
 
             client = self._get_client()
+            messages: List[Dict[str, str]] = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": context})
+            request_kwargs: Dict[str, Any] = {
+                "model": self.model_id,
+                "messages": messages,
+            }
+            if options:
+                request_kwargs["options"] = options
             response = await asyncio.wait_for(
-                client.chat(
-                    model=self.model_id,
-                    messages=[{"role": "user", "content": context}],
-                ),
+                client.chat(**request_kwargs),
                 timeout=self.timeout,
             )
             # SDK returns object or dict depending on version
@@ -68,7 +81,9 @@ class OllamaArchitect(Architect):
                 prompt_eval = response.get("prompt_eval_count", prompt_eval)
                 eval_count = response.get("eval_count", eval_count)
 
-            prompt_tokens = int(prompt_eval or max(len(context) // 4, 0))
+            prompt_tokens = int(
+                prompt_eval or max((len(context) + len(system)) // 4, 0)
+            )
             completion_tokens = int(eval_count or max(len(text) // 4, 0))
 
             return {

@@ -1,88 +1,187 @@
 # Model Profiles Configuration
-# Defines templates, quirks, and stop sequences for supported models.
+# Per-family templates, sampling settings, and quirks for the refinement
+# pipeline. Resolved by app/model_profiles.py: exact model entry → family
+# → generic defaults.
+#
+# Sources (official model cards / docs):
+#   - DeepSeek-R1 & distills: temperature 0.5-0.7 (0.6 recommended), top_p 0.95,
+#     NO system prompt (all instructions in the user prompt), enforce output
+#     starts with  Turnbull.
+#   - Qwen2.5-Coder: ChatML, system prompt "You are Qwen, created by Alibaba
+#     Cloud. You are a helpful assistant.", temp 0.7 / top_p 0.8 / top_k 20,
+#     128K context with YaRN.
+#   - Qwen3: hybrid thinking; /no_think soft switch; non-thinking rec temp 0.7,
+#     top_p 0.8, top_k 20, min_p 0; thinking rec temp 0.6, top_p 0.95.
+#   - SmolLM2-1.7B-Instruct: temp 0.2, top_p 0.9; strong at rewriting; English-only.
+#   - prism-ml Ternary-Bonsai: 2-bit ternary Qwen3-lineage (on-device) — treated
+#     as experimental.
+# Community fine-tunes (synapse-*, fable) are marked experimental: true.
 
-# --- Efficient Models (Low RAM) ---
+defaults:
+  temperature: 0.7
+  top_p: 0.9
+  num_ctx: 8192
+  num_predict: 2048
+  use_system_role: true
 
-tinyllama:latest:
-  model_name: "tinyllama:latest"
-  description: "TinyLlama 1.1B - Extremely fast, good for basic formatting."
-  prompt_template: "<|system|>
-{system_prompt}</s>
-<|user|>
-{user_prompt}</s>
-<|assistant|>
-"
-  quirks:
-    - "Keep instructions very simple."
-    - "Struggles with complex logic."
-    - "Good for rewriting simple sentences."
-  refiner_system_prompt: |
-    You are an expert Prompt Engineer. Rewrite the user's prompt to be clear and precise.
-    
-    User's Intent: {intent}
-    Original Prompt: {prompt}
+families:
+  deepseek_r1:
+    description: "DeepSeek-R1 reasoning family (incl. Qwen/Llama distills)."
+    temperature: 0.6
+    top_p: 0.95
+    use_system_role: false
+    num_predict: 4096
+    extra_system_directives: |
+      Begin your reply with <think>, reason step by step inside the thinking
+      block, then close it and output the refined prompt only.
+    quirks:
+      - "Emits a reasoning block (its native think tags) before the final answer; the pipeline strips them afterwards."
+      - "Official guidance: temperature 0.5-0.7 (0.6 recommended), top_p 0.95."
+      - "No system prompt: all instructions must live in the user message."
+      - "Avoid heavy few-shot examples; keep the refinement directive explicit."
 
-    Output ONLY the rewritten prompt. No explanations.
+  qwen25_coder:
+    description: "Qwen2.5-Coder family (code-specialized)."
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    extra_system_directives: |
+      You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+    quirks:
+      - "Excellent at code and structured output; long-context capable."
+      - "Official generation settings: temp 0.7, top_p 0.8, top_k 20, repetition_penalty ~1.05."
 
+  qwen25:
+    description: "Qwen2.5 general instruct family."
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    extra_system_directives: |
+      You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+    quirks:
+      - "Solid instruction following at small sizes; keep requests concrete."
 
-phi3:mini:
-  model_name: "phi3:mini"
-  description: "Phi-3 Mini 3.8B - High reasoning capability, efficient."
-  prompt_template: "<|user|>
-{user_prompt}<|end|>
-<|assistant|>
-"
-  quirks:
-    - "Excellent reasoning for its size."
-    - "Follows instructions well."
-    - "Can handle code and structured output."
-  refiner_system_prompt: |
-    You are an expert Prompt Engineer. Your goal is to rewrite the user's prompt to be clear, precise, and optimized for an AI model.
-    
-    Principles of good prompting:
-    1. Be specific and descriptive.
-    2. Specify the desired format (e.g., "markdown list", "json", "python code").
-    3. Provide context or roles (e.g., "Act as a senior developer").
-    4. Avoid ambiguity.
+  qwen3:
+    description: "Qwen3 hybrid thinking / non-thinking family."
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    extra_system_directives: |
+      /no_think
+    quirks:
+      - "Hybrid thinking model: append /no_think to disable reasoning for efficiency."
+      - "Official non-thinking rec: temp 0.7, top_p 0.8, top_k 20, min_p 0."
+      - "In thinking mode use temp 0.6, top_p 0.95; never greedy-decode."
 
-    User's Intent: {intent}
-    Original Prompt: {prompt}
+  smollm2:
+    description: "HuggingFace SmolLM2-1.7B-Instruct — tiny, English-only."
+    temperature: 0.2
+    top_p: 0.9
+    num_predict: 1024
+    quirks:
+      - "Small model: keep instructions short, explicit, and direct."
+      - "English-only; do not request other languages."
+      - "Strong at text rewriting when given a system role (per official card)."
 
-    Rewrite this prompt to be significantly better. Output ONLY the rewritten prompt.
+  bonsai:
+    description: "prism-ml Ternary-Bonsai (2-bit Qwen3-lineage, on-device)."
+    temperature: 0.7
+    top_p: 0.8
+    experimental: true
+    quirks:
+      - "Extreme ternary quantization; treat output quality as experimental."
+      - "Qwen3-lineage chat format."
 
-deepseek-r1:1.5b:
-  model_name: "deepseek-r1:1.5b"
-  description: "DeepSeek R1 1.5B - Distilled reasoning model. Tiny but smart."
-  prompt_template: "<|User|>{user_prompt}<|Assistant|>"
-  quirks:
-    - "Outputs <think>...</think> blocks before answering."
-    - "Very strong at logic and structure."
-    - "Remove thinking blocks for final output."
+  fable:
+    description: "Community creative-writing fine-tune (Fable lineage)."
+    temperature: 0.7
+    top_p: 0.9
+    experimental: true
+    quirks:
+      - "Storytelling-oriented fine-tune; may add narrative flourishes."
+      - "Unknown provenance; verify output before relying on it."
 
-# --- Heavyweight Models (High RAM/VRAM - Caution!) ---
+  deepseek_ft:
+    description: "Local DeepSeek-lineage fine-tune (unknown provenance)."
+    temperature: 0.6
+    top_p: 0.95
+    use_system_role: false
+    experimental: true
+    quirks:
+      - "Fine-tuned variant; behavior may drift from upstream DeepSeek-R1."
 
-"glm4:9b-chat-q4_K_M":
-  model_name: "glm4:9b-chat-q4_K_M"
-  description: "GLM-4 9B - Powerful multilingual model, requires high VRAM."
-  prompt_template: "[gMASK]<sop><|user|>
-{user_prompt}<|assistant|>
-"
-  quirks:
-    - "Strong reasoning capabilities."
-    - "Can be slow on consumer hardware."
-    - "Excellent for complex refinement tasks."
+  llama3:
+    description: "Llama 3 instruct family."
+    temperature: 0.7
+    top_p: 0.9
+    quirks:
+      - "Very chatty, tell it to be concise."
+      - "Great at roleplay."
 
-# --- Future Models (If hardware allows) ---
-llama3:8b:
-  model_name: "llama3:8b"
-  description: "Llama 3 8B - The standard for general purpose tasks."
-  prompt_template: "<|start_header_id|>system<|end_header_id|>
-
-{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-{user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-"
-  quirks:
-    - "Very chatty, tell it to be concise."
-    - "Great at roleplay."
+# Installed models on this machine (2026-10-26) — explicit entries so exact
+# matches win; unknown future models still resolve via family patterns.
+models:
+  deepseek-r1:1.5b:
+    family: deepseek_r1
+    description: "DeepSeek-R1 1.5B distill (official Ollama tag)."
+  deepseek-r1:7b:
+    family: deepseek_r1
+    description: "DeepSeek-R1 7B (full distill)."
+  deepseek-r1-distill-qwen-1.5b-q5:latest:
+    family: deepseek_r1
+    description: "DeepSeek-R1-Distill-Qwen-1.5B, q5 quantization."
+  deepseek-r1-distill-qwen-7b-q4_k_m:latest:
+    family: deepseek_r1
+    description: "DeepSeek-R1-Distill-Qwen-7B, q4_K_M quantization."
+  qwen2.5-coder:0.5b:
+    family: qwen25_coder
+    description: "Qwen2.5-Coder 0.5B — fastest, for low-resource machines."
+  qwen2.5-coder:3b:
+    family: qwen25_coder
+    description: "Qwen2.5-Coder 3B."
+  qwen2.5-coder:7b:
+    family: qwen25_coder
+    description: "Qwen2.5-Coder 7B — strongest local coder on this machine."
+  qwen2.5-coder-7b-instruct-q4_k_m:latest:
+    family: qwen25_coder
+    description: "Qwen2.5-Coder-7B-Instruct, q4_K_M quantization."
+  qwen2.5:0.5b:
+    family: qwen25
+    description: "Qwen2.5 0.5B — RC smoke default."
+  qwen3:8b:
+    family: qwen3
+    description: "Qwen3 8B — hybrid thinking."
+  smollm2-1.7b:latest:
+    family: smollm2
+    description: "SmolLM2 1.7B Instruct."
+  minicpm5-fable5-q4:latest:
+    family: fable
+    description: "Community Fable-lineage creative fine-tune (q4)."
+  synapse-bonsai-8b:latest:
+    family: bonsai
+    description: "Synapse fine-tune of the Ternary-Bonsai 8B family."
+  prism-ml_bonsai-8b-unpacked-q2_k:latest:
+    family: bonsai
+    description: "prism-ml Ternary-Bonsai 8B, unpacked q2_K quantization."
+  synapse-deepseek-local:latest:
+    family: deepseek_ft
+    description: "Local Synapse DeepSeek-lineage fine-tune."
+  # Profiles kept for common external models (not installed locally):
+  llama3:8b:
+    family: llama3
+    description: "Llama 3 8B — the standard for general purpose tasks."
+  tinyllama:latest:
+    family: generic
+    description: "TinyLlama 1.1B — extremely fast, basic formatting only."
+    quirks:
+      - "Keep instructions very simple; struggles with complex logic."
+  phi3:mini:
+    family: generic
+    description: "Phi-3 Mini 3.8B — high reasoning capability, efficient."
+    quirks:
+      - "Excellent reasoning for its size; follows instructions well."
+  glm4:9b-chat-q4_K_M:
+    family: generic
+    description: "GLM-4 9B — powerful multilingual model, needs high VRAM."
+    quirks:
+      - "Strong reasoning; can be slow on consumer hardware."
