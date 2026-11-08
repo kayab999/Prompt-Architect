@@ -1,0 +1,2 @@
+533ce3c23aeaf07f34dad1e7caed4f77fb6d148de04632ded8cd0660b5ebe4fe  frontend/src-tauri/target/release/bundle/deb/Prompt Architect_1.0.2_amd64.deb
+2d0959c447bcdc9e11afdc135e9788039a320ef1be9e6dc229d25e781af795d1  frontend/src-tauri/binaries/pa-backend-x86_64-unknown-linux-gnu
