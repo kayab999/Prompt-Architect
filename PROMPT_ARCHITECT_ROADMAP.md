@@ -68,3 +68,11 @@ Per-model behavior sourced from official model cards; community fine-tunes marke
 - [ ] VS Code extension parity with dynamic port  
 - [ ] Declarative MicroVM environment (no host `sudo`)  
 - [ ] Sidecar rebuild automation in CI  
+
+## v1.1 direction (per external review, 2026-11-08)
+- Reproducible evaluation of prompt quality rather than more features.
+  Benchmark: original prompts → refined prompts → independent task
+  evaluation. Metrics: instruction adherence, constraint preservation,
+  model compatibility, semantic drift, robustness, refinement efficiency.
+  Goal: answer "does Prompt Architect systematically produce better
+  instructions than a competent user without it?" 

@@ -64,16 +64,23 @@
 - [x] AppImage: **deferred to post-1.0** (linuxdeploy fails in this environment; deb is the supported Linux target — decision recorded 2026-10-26)
 - [ ] Human UI click-through (generate in window) — protocol below
 
-### UI click-through protocol (pending)
+### UI click-through protocol (pending — acceptance criteria)
 
 1. Install/open the app (`npx tauri dev` or the built `.deb`)
 2. Generate with a local Ollama model (e.g. `qwen2.5:0.5b`) → output + signed indicator visible in OutputPanel (`✎ Signed <hash>` / `Verified locally`)
 3. Click the signature chip → "Signature verified: text unmodified since signing."
-4. Corrupt the output text manually → click the chip again → "Signature invalid: text was modified or signed elsewhere."
+4. Corrupt the output text manually → click the chip again → "Signature invalid: text was modified or signed elsewhere." (state must switch, no stale positive)
 5. Trigger a failure case (e.g. blank input) → UI surfaces partial-failure state
-6. Save a prompt to the Library → appears in Library route after restart
-7. Settings: configure Groq key → status shows "Key configured (backend store 0600)"; confirm `app-settings.dat` no longer contains it
+6. Save a prompt to the Library → appears in Library route after restart (content + signature association preserved)
+7. Settings: configure Groq key → status shows "Key configured (backend store 0600)"; confirm `app-settings.dat` and any other config artefact does NOT contain the key (including post-migration)
 8. Record the date + result here
+
+### Additional acceptance checks (per external review, 2026-11-08 — non-blocking, quality gates)
+
+- **Cryptographic separation:** confirm the HMAC key (`SYSTEM_KEY`) is independent of the Groq API key (different sources, different files, never derived one from the other). ✅ already true by construction — verification step only.
+- **Secret protection:** confirm `.groq_key` is created with `0600` from the first write (no temporary looser mode), never appears in logs, and is not copied into backups/config dumps.
+- **HTTP body size:** the 100k-char Pydantic limit is the field-level bound; additionally confirm the ASGI/uvicorn request body cap (or a middleware) rejects oversized payloads before parsing. Document the configured max.
+- **Context window overflow:** when input exceeds the selected model's effective `num_ctx`, the pipeline must fail with a clear, controlled message (not a truncated/garbled output or an opaque provider error). Add a guard + message in `run_refinement`/architect call.
 
 ## Tag policy (per external review, 2026-11-08)
 
