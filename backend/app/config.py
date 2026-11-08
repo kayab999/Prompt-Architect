@@ -154,7 +154,7 @@ class Settings:
         "TRUE",
         "yes",
     )
-    APP_VERSION: str = "1.0.2-rc.1"
+    APP_VERSION: str = "1.0.2"
 
     PROFILES_PATH: Path = BACKEND_DIR / "app" / "profiles.yml"
     MODEL_PROFILES_PATH: Path = BACKEND_DIR / "model_profiles.yml"

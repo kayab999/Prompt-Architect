@@ -116,6 +116,27 @@ async def run_refinement(
         "rules": RuleLoader.load_rules(flavor),
     }
 
+    profile = config["model_profile"]
+    # Defensive guard: a 100k-char input on a small-context model would
+    # otherwise surface as a confusing provider error or truncated output.
+    # Fail fast with a clear, controlled message instead.
+    estimated_tokens = max(1, len(user_input) // 4)
+    if estimated_tokens > profile.num_ctx:
+        reason = (
+            f"Input (~{estimated_tokens} tokens) exceeds the selected model's "
+            f"context window ({profile.num_ctx} tokens). Shorten the input or "
+            f"choose a model with a larger context window."
+        )
+        logger.warning("run_refinement rejected: %s", reason)
+        return {
+            "response": "",
+            "success": False,
+            "iterations": 0,
+            "token_usage": {},
+            "audit_tags": [],
+            "full_trace": {"reason": reason, "success_gate": {"passed": False, "reason": reason}},
+        }
+
     pipeline = PromptRefinementPipeline(
         architect, linter, spec_validator, mask, config
     )

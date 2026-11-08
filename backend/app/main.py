@@ -6,6 +6,28 @@ import signal
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+# Defensive cap on the raw HTTP request body. The per-field Pydantic limit
+# (USER_INPUT_MAX_LENGTH) is the primary guard; this middleware protects
+# every endpoint against oversized payloads before parsing (DoS / RAM).
+MAX_REQUEST_BODY_BYTES = 1 * 1024 * 1024  # 1 MiB
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > MAX_REQUEST_BODY_BYTES:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Request body too large (max 1 MiB)."},
+                    )
+            except ValueError:
+                pass
+        return await call_next(request)
 from app.config import settings
 from app.db import init_db
 from app.api_router import router as api_router
@@ -38,7 +60,7 @@ async def lifespan(app: FastAPI):
 # Register atexit as a safety fallback
 atexit.register(cleanup_pid)
 
-app = FastAPI(title="Prompt Architect API", version="1.0.2-rc.1", lifespan=lifespan)
+app = FastAPI(title="Prompt Architect API", version="1.0.2", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,6 +73,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RequestSizeLimitMiddleware)
 
 # Mount all API routes
 app.include_router(api_router)
@@ -77,7 +101,7 @@ async def shutdown(x_shutdown_key: str = Header(None)):
 
 @app.get("/status")
 async def get_status():
-    return {"status": "online", "version": "1.0.2-rc.1"}
+    return {"status": "online", "version": "1.0.2"}
 
 
 @app.get("/health")

@@ -93,7 +93,38 @@ class TestInputLimits:
         )
         assert response.status_code == 422
 
-    def test_whitespace_only_generate_is_not_crash(self):
+    def test_oversized_http_body_returns_413(self):
+        """Raw body above the middleware cap is rejected before parsing."""
+        huge_model = "m" * (2 * 1024 * 1024)
+        response = client.post(
+            "/generate",
+            json={
+                "user_input": "short",
+                "profile_key": "technical",
+                "model": huge_model,
+            },
+        )
+        assert response.status_code == 413
+
+    def test_context_window_overflow_returns_422(self):
+        """Input exceeding the model's num_ctx fails with a clear message."""
+        from app.model_profiles import ModelProfileService
+
+        profile = ModelProfileService().resolve("qwen2.5:0.5b")
+        # ~4x the context window in characters → clearly over.
+        oversized_for_ctx = "x" * (profile.num_ctx * 4 + 1000)
+        # Must still be under the Pydantic field cap.
+        assert len(oversized_for_ctx) <= 100_000
+        response = client.post(
+            "/generate",
+            json={
+                "user_input": oversized_for_ctx,
+                "profile_key": "technical",
+                "model": "qwen2.5:0.5b",
+            },
+        )
+        assert response.status_code == 422
+        assert "context window" in response.json()["detail"].lower()
         """Blank content currently passes Pydantic (valid str) and is caught
         by the pipeline contract — must surface as a controlled 4xx/500,
         never a connection-level failure."""

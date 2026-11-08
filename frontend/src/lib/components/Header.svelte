@@ -10,7 +10,7 @@
       <span class="text-2xl">📐</span>
     </div>
     <div>
-      <h1 class="text-xl font-black text-white tracking-tighter italic">PROMPT ARCHITECT <span class="text-xs font-normal not-italic text-slate-500 ml-1">v1.0.2-rc.1</span></h1>
+      <h1 class="text-xl font-black text-white tracking-tighter italic">PROMPT ARCHITECT <span class="text-xs font-normal not-italic text-slate-500 ml-1">v1.0.2</span></h1>
       <div class="flex items-center gap-2">
         <div class="relative flex items-center justify-center">
             <span class="absolute w-2 h-2 rounded-full animate-ping opacity-75"

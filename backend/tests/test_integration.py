@@ -26,7 +26,7 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "online"
-        assert data["version"] == "1.0.2-rc.1"
+        assert data["version"] == "1.0.2"
 
 
 class TestModelsEndpoint:

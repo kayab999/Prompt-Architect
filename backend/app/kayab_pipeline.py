@@ -20,7 +20,7 @@ from .prompt_refinement import AutoFixer, Diagnostic, PromptLinter
 
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.2-rc.1"
+APP_VERSION = "1.0.2"
 
 # ---------- Integrity signing (local tamper-evidence) ----------
 # The signature proves: (a) the text was not modified after signing at this
