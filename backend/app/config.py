@@ -78,6 +78,34 @@ def get_or_create_system_key() -> str:
 SYSTEM_KEY = get_or_create_system_key()
 
 
+# --- 2b. Groq API Key (backend-side, at rest) ---
+# The key is stored as a 0600 file inside the OS data dir (same trust model as
+# .system_key). The frontend must NOT round-trip the key per request: it pushes
+# it once via POST /settings/groq and afterwards the backend serves /generate
+# using settings.GROQ_API_KEY. Env var (if set) always takes precedence.
+GROQ_KEY_FILE = DATA_DIR / ".groq_key"
+
+
+def load_groq_key() -> Optional[str]:
+    if not GROQ_KEY_FILE.exists():
+        return None
+    value = GROQ_KEY_FILE.read_text().strip()
+    return value or None
+
+
+def save_groq_key(key: str) -> None:
+    GROQ_KEY_FILE.write_text(key)
+    if os.name != "nt":
+        os.chmod(GROQ_KEY_FILE, 0o600)
+
+
+def clear_groq_key() -> None:
+    try:
+        GROQ_KEY_FILE.unlink(missing_ok=True)
+    except Exception as e:
+        logger.warning(f"Could not remove Groq key file. {e}")
+
+
 # --- 3. Ollama Connectivity Check ---
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "300"))
@@ -107,7 +135,12 @@ class Settings:
     PROFILES_DIR: Path = PROFILES_DIR
     LEGACY_LIBRARY_PATH: Path = BACKEND_DIR / "app" / "prompt_library.json"
 
-    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
+    # Env var takes precedence; otherwise load the 0600 key file the
+    # frontend pushed via POST /settings/groq. Never logged, never echoed
+    # back to the UI — only a boolean `groq_configured` is exposed.
+    GROQ_API_KEY: Optional[str] = (
+        os.getenv("GROQ_API_KEY") or load_groq_key()
+    )
     SYSTEM_KEY: str = SYSTEM_KEY
     ENV: str = os.getenv("PA_ENV", "production")
     OLLAMA_ONLINE: bool = OLLAMA_ONLINE

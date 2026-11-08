@@ -22,6 +22,43 @@ logger = logging.getLogger(__name__)
 
 APP_VERSION = "1.0.2-rc.1"
 
+# ---------- Integrity signing (local tamper-evidence) ----------
+# The signature proves: (a) the text was not modified after signing at this
+# installation (HMAC with the local system key + sha256 of the exact text).
+# It does NOT prove authorship or origin against an attacker who also
+# controls the machine. The UI must present it as such.
+
+
+def _integrity_payload_json(payload: Dict[str, Any]) -> str:
+    cert = {
+        "timestamp": payload["timestamp"],
+        "text_hash": payload["text_hash"],
+        "version": payload["version"],
+    }
+    return json.dumps(cert, sort_keys=True)
+
+
+def verify_integrity_signature(payload: Optional[Dict[str, Any]], text: str) -> bool:
+    """
+    True iff the payload is a well-formed signed record whose HMAC matches the
+    given text under the current local system key, i.e. the text is bit-identical
+    to what this installation signed.
+    """
+    if not isinstance(payload, dict):
+        return False
+    required = {"timestamp", "text_hash", "version", "signature"}
+    if not required.issubset(payload.keys()):
+        return False
+
+    expected_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if not hmac.compare_digest(str(payload["text_hash"]), expected_hash):
+        return False
+
+    recert_json = _integrity_payload_json(payload)
+    key = (settings.SYSTEM_KEY or "").encode("utf-8")
+    expected_sig = hmac.new(key, recert_json.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(str(payload["signature"]), expected_sig)
+
 REFINE_SYSTEM_TEMPLATE = """You are Prompt Architect, a professional prompt engineer.
 Refine the user's request into a clear, structured prompt optimized for an LLM.
 
@@ -308,7 +345,7 @@ class PromptRefinementPipeline:
             "text_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
             "version": APP_VERSION,
         }
-        cert_json = json.dumps(payload, sort_keys=True)
+        cert_json = _integrity_payload_json(payload)
         key = (self.service_key or settings.SYSTEM_KEY or "").encode("utf-8")
         payload["signature"] = hmac.new(
             key, cert_json.encode("utf-8"), hashlib.sha256

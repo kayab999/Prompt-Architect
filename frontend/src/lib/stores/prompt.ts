@@ -12,6 +12,13 @@ export const originalPrompt = writable('');
 export const refinedPrompt = writable('');
 export const selectedProfileKey = writable<string>('');
 
+// Integrity signing (local tamper-evidence) state for the latest output.
+// payload: { timestamp, text_hash, version, signature } — or null if unsigned.
+export const integritySignature = writable<Record<string, unknown> | null>(null);
+// tri-state: true = backend verified bit-identical text, false = verification
+// failed (modified or foreign signature), null = not verified yet.
+export const signatureVerified = writable<boolean | null>(null);
+
 // --- Dynamic Template Engine ---
 export interface PromptTemplate {
   category: string;

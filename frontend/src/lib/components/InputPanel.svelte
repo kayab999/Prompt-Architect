@@ -1,6 +1,5 @@
 <script lang="ts">
   import ProfileSelector from "./ProfileSelector.svelte";
-  import { isTauriRuntime } from "../services/tauri";
   import {
     originalPrompt,
     model,
@@ -11,6 +10,8 @@
     activeTemplate,
     templateVariables,
     refinedPrompt,
+    integritySignature,
+    signatureVerified,
   } from "$lib/stores/prompt";
   import { onMount } from "svelte";
   import { app } from "$lib/stores/app";
@@ -52,30 +53,27 @@
     app.clearMessages();
 
     try {
-      // Dynamic check for Groq based on model name pattern
-      const isGroqModel = currentModel.startsWith("llama-3") || 
-                         currentModel.startsWith("mixtral") || 
-                         currentModel.startsWith("gemma") || 
-                         currentModel.startsWith("qwen-2.5");
-
-      let groqApiKey: string | undefined;
+      // For Groq models, check backend-side key configuration (the key itself
+      // lives and stays in the backend; the frontend never round-trips it).
+      const isGroqModel = /(^|\/)(llama-3|mixtral|gemma|openai\/)/.test(
+        currentModel
+      );
       if (isGroqModel) {
-        if (isTauriRuntime()) {
-          const { Store } = await import("@tauri-apps/plugin-store");
-          const store = await Store.load("app-settings.dat");
-          groqApiKey = (await store.get("GROQ_API_KEY")) as string;
-        } else {
-          app.setError("Groq models require the desktop app.", true);
-          return;
+        const cfgRes = await backendFetch("/settings/groq");
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          if (!cfg.groq_configured) {
+            app.setError(
+              "Groq API key not configured. Set it in the Settings page.",
+              true
+            );
+            return;
+          }
         }
-        if (!groqApiKey) {
-          app.setError("Groq API Key not found in settings.", true);
-          return;
-        }
+        // If the status check itself fails, let /generate produce the error.
       }
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (groqApiKey) headers["X-Groq-Api-Key"] = groqApiKey;
 
       const res = await backendFetch("/generate", {
         method: "POST",
@@ -103,6 +101,8 @@
 
       const data = await res.json();
       refinedPrompt.set(data.response || "");
+      integritySignature.set(data.integrity_signature ?? null);
+      signatureVerified.set(null as boolean | null);
       if (data.success === false) {
         app.setError(
           data.reason
@@ -111,6 +111,28 @@
           false
         );
       } else {
+        // Ask the backend to prove the text is bit-identical to what it
+        // signed (local tamper-evidence, not authorship).
+        if (data.integrity_signature && data.response) {
+          try {
+            const vres = await backendFetch("/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: data.response,
+                integrity_signature: data.integrity_signature,
+              }),
+            });
+            if (vres.ok) {
+              const vdata = await vres.json();
+              signatureVerified.set(Boolean(vdata.verified));
+            } else {
+              signatureVerified.set(false);
+            }
+          } catch {
+            signatureVerified.set(null);
+          }
+        }
         app.setSuccess("Refinement complete!");
       }
     } catch (err: any) {

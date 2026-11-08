@@ -40,6 +40,13 @@ class CognitiveTraceEntry(BaseModel):
     timestamp: datetime
 
 
+
+# Hard cap on user-provided prompt text (chars). Local-only endpoint, but an
+# unbounded input can still cause disproportionate RAM use, processing time
+# and provider errors. ~100k chars is far above normal prompt sizes.
+USER_INPUT_MAX_LENGTH = 100_000
+
+
 class ProfileInfo(BaseModel):
     key: str
     name: str
@@ -47,7 +54,13 @@ class ProfileInfo(BaseModel):
 
 
 class GenerateRequest(BaseModel):
-    user_input: str
+    user_input: str = Field(
+        ...,
+        max_length=USER_INPUT_MAX_LENGTH,
+        description="The user's draft prompt (max {n} chars)".format(
+            n=USER_INPUT_MAX_LENGTH
+        ),
+    )
     profile_key: str
     # Allow specifying a model to override the default
     model: str = "deepseek-r1:1.5b"
@@ -187,8 +200,8 @@ class AutoOptimizeRequest(BaseModel):
 
 
 class OptimizeRequest(BaseModel):
-    prompt: str
-    intent: str
+    prompt: str = Field(..., max_length=USER_INPUT_MAX_LENGTH)
+    intent: str = Field(..., max_length=USER_INPUT_MAX_LENGTH)
     target_model: str
     refiner_model: str
 
@@ -199,13 +212,37 @@ class OptimizeResponse(BaseModel):
     operational_tier: str
 
 
+class GroqKeyRequest(BaseModel):
+    # Full Groq API key. Never logged, never echoed back in responses.
+    api_key: str = Field(..., min_length=1, max_length=256)
+
+
+class GroqKeyStatusResponse(BaseModel):
+    groq_configured: bool
+    source: str  # "env" | "backend" (from where the key originates)
+
+
+class VerifyRequest(BaseModel):
+    text: str = Field(..., max_length=USER_INPUT_MAX_LENGTH * 2)
+    integrity_signature: Dict[str, Any]
+
+
+class VerifyResponse(BaseModel):
+    verified: bool
+    detail: str
+
+
 class TestRequest(BaseModel):
     refined_prompt: str
     target_model: str
 
 
 class RefineLoopRequest(BaseModel):
-    user_input: str = Field(..., description="La instrucción original del usuario")
+    user_input: str = Field(
+        ...,
+        max_length=USER_INPUT_MAX_LENGTH,
+        description="La instrucción original del usuario",
+    )
     flavor: str = Field(
         default="technical",
         description="El perfil de refinamiento: 'technical' o 'creative'",

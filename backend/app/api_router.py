@@ -13,17 +13,24 @@ Endpoints:
 """
 
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException
 
-from .config import settings
+from .kayab_pipeline import verify_integrity_signature
+
+from .config import settings, save_groq_key, clear_groq_key, load_groq_key
 from .models import (
     GenerateRequest,
     GenerateResponse,
     OptimizeRequest,
     OptimizeResponse,
     VisualPromptRequest,
+    GroqKeyRequest,
+    GroqKeyStatusResponse,
+    VerifyRequest,
+    VerifyResponse,
 )
 from .mcp_adapter import (
     run_refinement,
@@ -49,7 +56,9 @@ async def generate(
     """
     Main endpoint: generates a refined prompt using the Kayab pipeline.
 
-    Accepts X-Groq-Api-Key header to override the configured key.
+    The Groq key normally lives backend-side (POST /settings/groq or env).
+    The X-Groq-Api-Key header remains supported as a legacy override but is
+    no longer used by the bundled UI (sent once via /settings/groq instead).
     Returns the rendered prompt text in the 'response' field.
     """
     groq_key = x_groq_api_key or settings.GROQ_API_KEY
@@ -171,6 +180,80 @@ async def optimize(
     except Exception as e:
         logger.error(f"Optimization failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@router.post("/settings/groq", response_model=GroqKeyStatusResponse)
+async def set_groq_key(request: GroqKeyRequest):
+    """
+    Stores the Groq API key backend-side (0600 file inside the OS data dir).
+    The key is never logged and never returned to the frontend — this endpoint
+    answers with a boolean status only. An env-provided GROQ_API_KEY takes
+    precedence and is not overridable here.
+    """
+    if os.getenv("GROQ_API_KEY"):
+        return GroqKeyStatusResponse(groq_configured=True, source="env")
+
+    key = request.api_key.strip()
+    if not key:
+        raise HTTPException(status_code=422, detail="Empty API key")
+    try:
+        save_groq_key(key)
+        settings.GROQ_API_KEY = key
+    except Exception as e:
+        logger.error(f"Could not persist Groq key: {e}")
+        raise HTTPException(status_code=500, detail="Could not store API key")
+
+    logger.info("Groq API key stored backend-side (permissions tightened to 0600).")
+    return GroqKeyStatusResponse(groq_configured=True, source="backend")
+
+
+@router.delete("/settings/groq", response_model=GroqKeyStatusResponse)
+async def delete_groq_key():
+    """Clears the backend-stored Groq key (leaves an env-provided key intact)."""
+    if os.getenv("GROQ_API_KEY"):
+        settings.GROQ_API_KEY = None
+        return GroqKeyStatusResponse(groq_configured=False, source="env")
+    clear_groq_key()
+    settings.GROQ_API_KEY = None
+    return GroqKeyStatusResponse(groq_configured=False, source="backend")
+
+
+@router.get("/settings/groq", response_model=GroqKeyStatusResponse)
+async def get_groq_key_status():
+    """
+    Reports whether a Groq key is configured. Never returns the key itself.
+    """
+    source = (
+        "env"
+        if os.getenv("GROQ_API_KEY")
+        else ("backend" if settings.GROQ_API_KEY else "unset")
+    )
+    return GroqKeyStatusResponse(
+        groq_configured=bool(settings.GROQ_API_KEY), source=source
+    )
+
+
+@router.post("/verify", response_model=VerifyResponse)
+async def verify_prompt_signature(request: VerifyRequest):
+    """
+    Verifies that the given text is bit-identical to the output this
+    installation signed (local tamper-evidence). This does NOT prove
+    authorship or origin — HMAC is keyed by the local system key.
+    """
+    try:
+        verified = verify_integrity_signature(request.integrity_signature, request.text)
+    except Exception as e:
+        logger.error(f"Signature verification error: {e}")
+        raise HTTPException(status_code=500, detail="Verification failed")
+
+    return VerifyResponse(
+        verified=verified,
+        detail=(
+            "Text matches the locally signed output (tamper-evident)."
+            if verified
+            else "Signature invalid: text was modified or signature is not from this installation."
+        ),
+    )
 
 
 @router.get("/presets")
