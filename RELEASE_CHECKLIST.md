@@ -17,6 +17,16 @@
 - [x] Live smokes: qwen2.5:0.5b, smollm2-1.7b, deepseek-r1:1.5b (R1 no-system-role path), qwen2.5-coder:3b — all 200/success/signed/1 iteration
 - [ ] Rebuild sidecar + deb with audit fixes → UI click-through (protocol below)
 
+## RC Closure — Hardening P2 (2026-11-08, external review)
+
+- [x] Input limits: `user_input`/`prompt`/`intent` capped at 100k chars; 422 pre-pipeline; tests for oversize/boundary/blank (backend/tests/test_hardening.py)
+- [x] Groq key backend-side: `DATA_DIR/.groq_key` (0600); `POST/GET/DELETE /settings/groq` (never logs/echoes the key, env takes precedence); UI no longer round-trips the key per generate; legacy Tauri-store keys auto-migrated on Settings mount
+- [x] `POST /verify`: local tamper-evidence (HMAC-SHA256 + sha256 of exact text, local system key). Semantics documented: proves the text is unmodified since signing at this installation — does NOT prove authorship against an operator who controls the key
+- [x] OutputPanel shows signature state (tri-state: verified / invalid / verify-pending) with 1-click reverification
+- [x] Suite 75 passing; `./ci/gates.sh` green; `npm run build` green
+- [ ] Sidecar + deb rebuild with these fixes
+- [ ] UI click-through re-run on rebuilt package — protocol below (updated with signature step)
+
 ## Model enablement (M1–M4, 2026-10-26)
 
 - [x] M1: per-model behavior layer — `ModelProfileService` + profile-aware pipeline (system role vs. embedded-user-message for DeepSeek-R1)
@@ -57,10 +67,18 @@
 ### UI click-through protocol (pending)
 
 1. Install/open the app (`npx tauri dev` or the built `.deb`)
-2. Generate with a local Ollama model (e.g. `qwen2.5:0.5b`) → output + integrity signature visible
-3. Trigger a failure case (e.g. empty/blank input) → UI surfaces partial-failure state
-4. Save a prompt to the Library → appears in Library route after restart
-5. Record the date + result here
+2. Generate with a local Ollama model (e.g. `qwen2.5:0.5b`) → output + signed indicator visible in OutputPanel (`✎ Signed <hash>` / `Verified locally`)
+3. Click the signature chip → "Signature verified: text unmodified since signing."
+4. Corrupt the output text manually → click the chip again → "Signature invalid: text was modified or signed elsewhere."
+5. Trigger a failure case (e.g. blank input) → UI surfaces partial-failure state
+6. Save a prompt to the Library → appears in Library route after restart
+7. Settings: configure Groq key → status shows "Key configured (backend store 0600)"; confirm `app-settings.dat` no longer contains it
+8. Record the date + result here
+
+## Tag policy (per external review, 2026-11-08)
+
+- `v1.0.2-rc.1` is published and **immutable** — it will NOT be re-pointed.
+- Stable release procedure: rebuild sidecar + deb from final commit → gates + tests → click-through protocol above → create annotated tag `v1.0.2` on the approving commit → attach the `.deb` + SHA256 checksums + release notes.
 
 ## Documentation
 

@@ -44,6 +44,14 @@ Per-model behavior sourced from official model cards; community fine-tunes marke
 - [x] Test suite 100% green with pipeline contracts  
 - [x] Docs honesty (RC, not false “stable”)  
 
+## RC Closure — Hardening P2 (2026-11-08, tras audit externo)
+
+- [x] Límite `user_input`/`prompt`/`intent` (100k chars, 422 pre-pipeline) + tests de límite/frontera/blanco
+- [x] Clave Groq backend-side (`DATA_DIR/.groq_key`, 0600); endpoints `/settings/groq` set/get/delete sin eco de la clave; UI sin round-trip ni store Tauri (migración automática del modo legacy)
+- [x] `POST /verify` — tamper-evidencia local (HMAC + sha256), semántica explícita (no acredita autoría); visualización de firma en OutputPanel con re-verificación
+- [ ] UI click-through sobre paquete reconstruido (protocolo en RELEASE_CHECKLIST)
+- [ ] Keyring del OS como destino para distribución pública (0600-file es el estado RC)
+
 ## RC Release Engineering (2026-10-26)
 
 - [x] Git repo + `v1.0.2-rc.1` tag  

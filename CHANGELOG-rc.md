@@ -1,5 +1,25 @@
 # Changelog — Prompt Architect RC
 
+## hardening P2 — 2026-11-08 (RC closure cycle, prioridades 1–2 del audit externo)
+
+### Input limits
+- `GenerateRequest.user_input`, `RefineLoopRequest.user_input`, `OptimizeRequest.prompt`/`intent` limitados a `USER_INPUT_MAX_LENGTH` (100.000 caracteres). Se rechazan con 422 en validación (antes del pipeline); tests de límite, frontera y entrada en blanco.
+
+### Groq key backend-side (antes: store Tauri en texto plano + round-trip por request)
+- La clave ahora se guarda en `DATA_DIR/.groq_key` con permisos 0600 (mismo modelo de confianza que `.system_key`); `GROQ_API_KEY` por env sigue teniendo precedencia.
+- Nuevos endpoints `POST/GET/DELETE /settings/groq`: nunca loggean ni devuelven la clave — la respuesta es solo `{groq_configured, source}`.
+- La UI ya no lee el store de Tauri ni reenvía la clave en cada generación: Settings la empuja una vez al backend y el InputPanel no la toca. Claves antiguas del store se migran una vez y se borran.
+- `/vital-signs.groq_configured` refleja la clave backend-side.
+
+### Semántica de la firma de integridad (punto 3.3 del audit)
+- Nuevo `POST /verify`: recalcula HMAC+hash con la clave local del sistema y reporta si el texto es bit-idéntico al firmado por esta instalación. Semántica explícita: **tamper-evidencia local, no acreditación de autoría** (documentado en código y en la UI).
+- `OutputPanel` muestra estado firmado/verificado (tri-estado) con re-verificación con un clic.
+
+### Tests
+- Suite: **75 passing** (58 previos + 17 nuevos de hardening). `./ci/gates.sh` green. `npm run build` green.
+
+---
+
 ## 1.0.2-rc.1 — 2026-10-26 (full technical + codebase audit)
 
 Scope: hot-path backend review (main/api_router/mcp_adapter/kayab_pipeline/prompt_refinement/services/db/config/entry/hal/models/architects/forge/telemetry), frontend + Tauri deep-dive, dependencies/CI/packaging audit, live model smokes on all four profile families.
